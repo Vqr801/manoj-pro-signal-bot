@@ -8,16 +8,16 @@
 </style>
 </head>
 <body>
-<header><h1>MANOJ PRO SIGNAL BOT</h1><p>5 मिनट Forex Signal • CALL / PUT / NO TRADE</p></header>
+<header><h1>MANOJ PRO SIGNAL BOT</h1><p>1 से 5 मिनट Forex Signal • CALL / PUT / NO TRADE</p></header>
 <main class="wrap">
 <div class="card">
 <label for="key">Twelve Data API Key</label>
 <input id="key" type="password" autocomplete="off" placeholder="अपनी API key यहाँ डालें">
 <div class="muted warning">सुरक्षा: API key इस सार्वजनिक HTML फाइल में सेव नहीं होती; यह केवल इस ब्राउज़र के session में रहती है। फिर भी यह browser से API को भेजी जाती है। इसे किसी के साथ साझा न करें और इस पेज को दूसरों के साथ API key सहित इस्तेमाल न करें।</div>
-<div class="top"><button id="save">Key सेव करें</button><button id="scan">अभी Scan करें</button></div>
+<label for="tf" style="margin-top:14px">सिग्नल का समय चुनें</label><select id="tf" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="1">1 मिनट</option><option value="2">2 मिनट</option><option value="3">3 मिनट</option><option value="4">4 मिनट</option><option value="5" selected>5 मिनट</option></select><div class="top"><button id="save">Key सेव करें</button><button id="scan">अभी Scan करें</button></div>
 <div id="status" class="status">पहले API key डालें।</div>
 </div>
-<div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">हर 5 मिनट में जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
+<div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">चुने हुए समय के مطابق जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
 <div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, ADX-जैसी trend strength और पिछली बंद candle की दिशा। कमज़ोर या मिले-जुले संकेत पर NO TRADE। यह केवल शैक्षिक संकेतक है, लाभ या 85% accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
 </main>
 <script>
@@ -30,12 +30,14 @@ function ema(a,n){let k=2/(n+1),v=a[0];for(let i=1;i<a.length;i++)v=a[i]*k+v*(1-
 function rsi(a){let g=0,l=0;for(let i=a.length-14;i<a.length;i++){let d=a[i]-a[i-1];if(d>0)g+=d;else l-=d}if(l===0)return 100;let rs=(g/14)/(l/14);return 100-100/(1+rs)}
 function strength(c){let tr=0,plus=0,minus=0;for(let i=c.length-14;i<c.length;i++){let x=c[i],p=c[i-1];let up=x.high-p.high,down=p.low-x.low;tr+=Math.max(x.high-x.low,Math.abs(x.high-p.close),Math.abs(x.low-p.close));if(up>down&&up>0)plus+=up;if(down>up&&down>0)minus+=down}if(!tr)return 0;return Math.abs(plus-minus)/tr*100}
 async function one(pair,key){
- const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval=5min&outputsize=80&timezone=UTC&apikey='+encodeURIComponent(key);
+ const minutes=Number($('tf').value);
+ const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval=1min&outputsize=500&timezone=UTC&apikey='+encodeURIComponent(key);
  const res=await fetch(url);const j=await res.json();if(!j.values)throw Error(j.message||'डेटा उपलब्ध नहीं');
- let c=j.values.map(v=>({time:v.datetime,open:+v.open,high:+v.high,low:+v.low,close:+v.close})).reverse();
- // वर्तमान 5-मिनट candle को छोड़ें; केवल बंद candle पर निर्णय
- const now=new Date(),bucket=Math.floor(now.getTime()/300000)*300000;
- c=c.filter(x=>new Date(x.time.replace(' ','T')+'Z').getTime()<bucket);
+ const raw=j.values.map(v=>({time:v.datetime,open:+v.open,high:+v.high,low:+v.low,close:+v.close})).reverse();
+ // 1-मिनट candles को चुने हुए 1-5 मिनट के समूह में जोड़ें; अधूरी candle हटाएँ
+ const step=minutes*60000,groups=new Map();
+ for(const x of raw){const t=new Date(x.time.replace(' ','T')+'Z').getTime(),start=Math.floor(t/step)*step;if(start+step>Date.now())continue;const g=groups.get(start);if(!g)groups.set(start,{time:new Date(start).toISOString().slice(0,19).replace('T',' '),open:x.open,high:x.high,low:x.low,close:x.close});else{g.high=Math.max(g.high,x.high);g.low=Math.min(g.low,x.low);g.close=x.close;}}
+ let c=[...groups.values()].sort((a,b)=>a.time.localeCompare(b.time));
  if(c.length<30)throw Error('पर्याप्त candles नहीं');
  const closes=c.map(x=>x.close),last=c[c.length-1],prev=c[c.length-2];
  const e9=ema(closes.slice(-30),9),e21=ema(closes.slice(-50),21),rv=rsi(closes),adx=strength(c);
@@ -54,9 +56,9 @@ async function scan(){
   catch(e){html+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,90)+'</div></div><div class="wait">डेटा नहीं</div></div>'}
   $('results').innerHTML=html;
  }
- say('Scan पूरा हुआ। अगला scan 5 मिनट बाद (यदि Auto Scan चालू है)।');$('scan').disabled=false;$('auto').disabled=false;
+ say('Scan पूरा हुआ ('+ $('tf').value +' मिनट)। Auto Scan हर चुने हुए समय पर होगा।');$('scan').disabled=false;$('auto').disabled=false;
 }
 $('scan').onclick=scan;
-$('auto').onclick=()=>{if(timer){clearInterval(timer);timer=null;$('auto').textContent='Auto Scan चालू करें';say('Auto Scan बंद है।')}else{if(!$('key').value.trim()&&!sessionStorage.getItem('tdkey')){say('पहले API key डालें।');return}sessionStorage.setItem('tdkey',$('key').value.trim()||sessionStorage.getItem('tdkey'));scan();timer=setInterval(scan,300000);$('auto').textContent='Auto Scan बंद करें';}};
+$('auto').onclick=()=>{if(timer){clearInterval(timer);timer=null;$('auto').textContent='Auto Scan चालू करें';say('Auto Scan बंद है।')}else{if(!$('key').value.trim()&&!sessionStorage.getItem('tdkey')){say('पहले API key डालें।');return}sessionStorage.setItem('tdkey',$('key').value.trim()||sessionStorage.getItem('tdkey'));scan();timer=setInterval(scan,Number($('tf').value)*60000);$('auto').textContent='Auto Scan बंद करें';}};
 </script>
 </body></html>
