@@ -59,6 +59,7 @@ async function scan(){
  say('Scan पूरा हुआ ('+ $('tf').value +' मिनट)। Auto Scan हर चुने हुए समय पर होगा।');$('scan').disabled=false;$('auto').disabled=false;
 }
 $('scan').onclick=scan;
+$('tf').addEventListener('change',()=>{if(timer){clearInterval(timer);timer=setInterval(scan,Number($('tf').value)*60000);say('समय बदल गया। Auto Scan अब हर '+$('tf').value+' मिनट में होगा।');}});
 $('auto').onclick=()=>{if(timer){clearInterval(timer);timer=null;$('auto').textContent='Auto Scan चालू करें';say('Auto Scan बंद है।')}else{if(!$('key').value.trim()&&!sessionStorage.getItem('tdkey')){say('पहले API key डालें।');return}sessionStorage.setItem('tdkey',$('key').value.trim()||sessionStorage.getItem('tdkey'));scan();timer=setInterval(scan,Number($('tf').value)*60000);$('auto').textContent='Auto Scan बंद करें';}};
 </script>
 </body></html>
