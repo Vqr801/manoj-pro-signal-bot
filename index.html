@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MANOJ PRO SIGNAL BOT</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#101827;color:#edf2f7;font:16px system-ui,Arial}header{padding:22px 16px;background:#17243a;text-align:center;border-bottom:1px solid #30415b}h1{margin:0;font-size:23px;color:#68e0bd}header p{margin:7px 0 0;color:#bac7d8;font-size:13px}.wrap{max-width:850px;margin:auto;padding:16px}.card{background:#19263b;border:1px solid #30415b;border-radius:12px;padding:15px;margin:12px 0}label{display:block;margin-bottom:7px;color:#cbd5e1}input,button{font:inherit;border-radius:8px;padding:12px;border:1px solid #52647d}input{width:100%;background:#0e1726;color:white}button{background:#1aa783;color:#061b16;font-weight:700;border:0;margin-top:10px;width:100%}button:disabled{opacity:.5}.muted{font-size:13px;color:#aab8ca;line-height:1.5}.status{padding:10px;border-radius:8px;background:#0e1726;margin-top:10px}.row{display:flex;justify-content:space-between;gap:10px;align-items:center;border-bottom:1px solid #30415b;padding:12px 0}.row:last-child{border:0}.call{color:#57e0a4;font-weight:800}.put{color:#ff8585;font-weight:800}.wait{color:#f5ce70;font-weight:800}.small{font-size:12px;color:#aab8ca}.warning{color:#ffd28a}.top{display:flex;gap:10px;flex-wrap:wrap}.top button{flex:1;min-width:130px}
+</style>
+</head>
+<body>
+<header><h1>MANOJ PRO SIGNAL BOT</h1><p>5 मिनट Forex Signal • CALL / PUT / NO TRADE</p></header>
+<main class="wrap">
+<div class="card">
+<label for="key">Twelve Data API Key</label>
+<input id="key" type="password" autocomplete="off" placeholder="अपनी API key यहाँ डालें">
+<div class="muted warning">सुरक्षा: API key इस सार्वजनिक HTML फाइल में सेव नहीं होती; यह केवल इस ब्राउज़र के session में रहती है। फिर भी यह browser से API को भेजी जाती है। इसे किसी के साथ साझा न करें और इस पेज को दूसरों के साथ API key सहित इस्तेमाल न करें।</div>
+<div class="top"><button id="save">Key सेव करें</button><button id="scan">अभी Scan करें</button></div>
+<div id="status" class="status">पहले API key डालें।</div>
+</div>
+<div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">हर 5 मिनट में जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
+<div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, ADX-जैसी trend strength और पिछली बंद candle की दिशा। कमज़ोर या मिले-जुले संकेत पर NO TRADE। यह केवल शैक्षिक संकेतक है, लाभ या 85% accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
+</main>
+<script>
+const pairs=['EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','USD/CAD','NZD/USD','EUR/JPY','GBP/JPY','EUR/GBP','AUD/JPY','EUR/CHF'];
+const $=id=>document.getElementById(id);let timer=null;
+$('key').value=sessionStorage.getItem('tdkey')||'';
+function say(t){$('status').textContent=t}
+$('save').onclick=()=>{const k=$('key').value.trim();if(!k){say('पहले API key डालें।');return}sessionStorage.setItem('tdkey',k);say('Key इस session के लिए सेव हो गई।')};
+function ema(a,n){let k=2/(n+1),v=a[0];for(let i=1;i<a.length;i++)v=a[i]*k+v*(1-k);return v}
+function rsi(a){let g=0,l=0;for(let i=a.length-14;i<a.length;i++){let d=a[i]-a[i-1];if(d>0)g+=d;else l-=d}if(l===0)return 100;let rs=(g/14)/(l/14);return 100-100/(1+rs)}
+function strength(c){let tr=0,plus=0,minus=0;for(let i=c.length-14;i<c.length;i++){let x=c[i],p=c[i-1];let up=x.high-p.high,down=p.low-x.low;tr+=Math.max(x.high-x.low,Math.abs(x.high-p.close),Math.abs(x.low-p.close));if(up>down&&up>0)plus+=up;if(down>up&&down>0)minus+=down}if(!tr)return 0;return Math.abs(plus-minus)/tr*100}
+async function one(pair,key){
+ const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval=5min&outputsize=80&timezone=UTC&apikey='+encodeURIComponent(key);
+ const res=await fetch(url);const j=await res.json();if(!j.values)throw Error(j.message||'डेटा उपलब्ध नहीं');
+ let c=j.values.map(v=>({time:v.datetime,open:+v.open,high:+v.high,low:+v.low,close:+v.close})).reverse();
+ // वर्तमान 5-मिनट candle को छोड़ें; केवल बंद candle पर निर्णय
+ const now=new Date(),bucket=Math.floor(now.getTime()/300000)*300000;
+ c=c.filter(x=>new Date(x.time.replace(' ','T')+'Z').getTime()<bucket);
+ if(c.length<30)throw Error('पर्याप्त candles नहीं');
+ const closes=c.map(x=>x.close),last=c[c.length-1],prev=c[c.length-2];
+ const e9=ema(closes.slice(-30),9),e21=ema(closes.slice(-50),21),rv=rsi(closes),adx=strength(c);
+ const bullish=last.close>last.open,bearish=last.close<last.open;
+ let score=0,side='NO TRADE';
+ if(e9>e21&&rv>=52&&rv<=70&&adx>=18&&bullish&&last.close>prev.high){side='CALL';score=75}
+ else if(e9<e21&&rv<=48&&rv>=30&&adx>=18&&bearish&&last.close<prev.low){side='PUT';score=75}
+ return {pair,side,score,rsi:rv,adx,time:last.time};
+}
+async function scan(){
+ const key=sessionStorage.getItem('tdkey')||$('key').value.trim();if(!key){say('API key डालें और Key सेव करें।');return}
+ $('scan').disabled=true;$('auto').disabled=true;say('Market data जाँचा जा रहा है…');$('results').innerHTML='';
+ let html='';
+ for(const p of pairs){
+  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • '+x.time+' UTC</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
+  catch(e){html+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,90)+'</div></div><div class="wait">डेटा नहीं</div></div>'}
+  $('results').innerHTML=html;
+ }
+ say('Scan पूरा हुआ। अगला scan 5 मिनट बाद (यदि Auto Scan चालू है)।');$('scan').disabled=false;$('auto').disabled=false;
+}
+$('scan').onclick=scan;
+$('auto').onclick=()=>{if(timer){clearInterval(timer);timer=null;$('auto').textContent='Auto Scan चालू करें';say('Auto Scan बंद है।')}else{if(!$('key').value.trim()&&!sessionStorage.getItem('tdkey')){say('पहले API key डालें।');return}sessionStorage.setItem('tdkey',$('key').value.trim()||sessionStorage.getItem('tdkey'));scan();timer=setInterval(scan,300000);$('auto').textContent='Auto Scan बंद करें';}};
+</script>
+</body></html>
