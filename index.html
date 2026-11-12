@@ -14,6 +14,7 @@
 <label for="key">Twelve Data API Key</label>
 <input id="key" type="password" autocomplete="off" placeholder="अपनी API key यहाँ डालें">
 <div class="muted warning">सुरक्षा: API key इसी browser के local storage में सेव होगी, सार्वजनिक HTML में नहीं। यह browser में देखी जा सकती है और API provider को भेजी जाती है। साझा मोबाइल पर सेव न करें।</div>
+<label for="pair" style="margin-top:14px">अपनी करेंसी चुनें</label><select id="pair" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="ALL">सभी करेंसी</option><option value="EUR/USD">EUR/USD</option><option value="GBP/USD">GBP/USD</option><option value="USD/JPY">USD/JPY</option><option value="USD/CHF">USD/CHF</option><option value="AUD/USD">AUD/USD</option><option value="USD/CAD">USD/CAD</option><option value="NZD/USD">NZD/USD</option><option value="EUR/JPY">EUR/JPY</option><option value="GBP/JPY">GBP/JPY</option><option value="EUR/GBP">EUR/GBP</option><option value="AUD/JPY">AUD/JPY</option><option value="EUR/CHF">EUR/CHF</option></select>
 <label for="tf" style="margin-top:14px">सिग्नल का समय चुनें</label><select id="tf" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="1">1 मिनट</option><option value="2">2 मिनट</option><option value="3">3 मिनट</option><option value="4">4 मिनट</option><option value="5" selected>5 मिनट</option></select><div class="top"><button id="save">Key सेव करें</button><button id="scan">अभी Scan करें</button></div>
 <div id="status" class="status">पहले API key डालें।</div>
 </div>
@@ -54,7 +55,9 @@ async function scan(){
  const key=(()=>{try{return localStorage.getItem('tdkey')||$('key').value.trim()}catch(e){return $('key').value.trim()}})();if(!key){say('API key डालें और Key सेव करें।');return}
  $('scan').disabled=true;$('auto').disabled=true;say('Market data जाँचा जा रहा है…');$('results').innerHTML='';
  let html='';
- for(const p of pairs){
+ const selected=$('pair').value;
+ const scanPairs=selected==='ALL'?pairs:[selected];
+ for(const p of scanPairs){
   try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • '+x.time+' UTC</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
   catch(e){html+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,90)+'</div></div><div class="wait">डेटा नहीं</div></div>'}
   $('results').innerHTML=html;
