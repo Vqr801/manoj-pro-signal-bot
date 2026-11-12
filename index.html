@@ -28,7 +28,8 @@ function say(t){$('status').textContent=t}
 $('save').onclick=()=>{const k=$('key').value.trim();if(!k){say('पहले API key डालें।');return}try{localStorage.setItem('tdkey',k);say('Key इस browser में सेव हो गई। अब पेज Refresh करने पर भी रहेगी।')}catch(e){say('Key सेव नहीं हुई। Browser की Site settings में storage/cookies allow करें और फिर कोशिश करें।')}};
 function ema(a,n){let k=2/(n+1),v=a[0];for(let i=1;i<a.length;i++)v=a[i]*k+v*(1-k);return v}
 function rsi(a){let g=0,l=0;for(let i=a.length-14;i<a.length;i++){let d=a[i]-a[i-1];if(d>0)g+=d;else l-=d}if(l===0)return 100;let rs=(g/14)/(l/14);return 100-100/(1+rs)}
-function strength(c){let tr=0,plus=0,minus=0;for(let i=c.length-14;i<c.length;i++){let x=c[i],p=c[i-1];let up=x.high-p.high,down=p.low-x.low;tr+=Math.max(x.high-x.low,Math.abs(x.high-p.close),Math.abs(x.low-p.close));if(up>down&&up>0)plus+=up;if(down>up&&down>0)minus+=down}if(!tr)return 0;return Math.abs(plus-minus)/tr*100}\nfunction macd(a){const line=[];for(let i=0;i<a.length;i++){const s=a.slice(0,i+1);line.push(ema(s,12)-ema(s,26));}const signal=ema(line.slice(-9),9);return {line:line[line.length-1],signal,previous:line[line.length-2]};}
+function strength(c){let tr=0,plus=0,minus=0;for(let i=c.length-14;i<c.length;i++){let x=c[i],p=c[i-1];let up=x.high-p.high,down=p.low-x.low;tr+=Math.max(x.high-x.low,Math.abs(x.high-p.close),Math.abs(x.low-p.close));if(up>down&&up>0)plus+=up;if(down>up&&down>0)minus+=down}if(!tr)return 0;return Math.abs(plus-minus)/tr*100}
+function macd(a){const line=[];for(let i=0;i<a.length;i++){const s=a.slice(0,i+1);line.push(ema(s,12)-ema(s,26));}const signal=ema(line.slice(-9),9);return {line:line[line.length-1],signal,previous:line[line.length-2]};}
 async function one(pair,key){
  const minutes=Number($('tf').value);
  const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval=1min&outputsize=500&timezone=UTC&apikey='+encodeURIComponent(key);
