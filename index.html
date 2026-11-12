@@ -18,7 +18,7 @@
 <div id="status" class="status">पहले API key डालें।</div>
 </div>
 <div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">चुने हुए समय के مطابق जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
-<div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, ADX-जैसी trend strength, MACD (12/26/9) पुष्टि और पिछली बंद candle की दिशा। कमज़ोर या मिले-जुले संकेत पर NO TRADE। यह केवल शैक्षिक संकेतक है, लाभ या 85% accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
+<div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, ADX-जैसी trend strength, MACD (12/26/9) की दिशा-पुष्टि और पिछली बंद candle की दिशा। CALL के लिए MACD bullish और PUT के लिए MACD bearish होना भी जरूरी है। कमज़ोर या मिले-जुले संकेत पर NO TRADE। यह केवल शैक्षिक संकेतक है, लाभ या 85% accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
 </main>
 <script>
 const pairs=['EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','USD/CAD','NZD/USD','EUR/JPY','GBP/JPY','EUR/GBP','AUD/JPY','EUR/CHF'];
@@ -43,17 +43,19 @@ async function one(pair,key){
  const closes=c.map(x=>x.close),last=c[c.length-1],prev=c[c.length-2];
  const e9=ema(closes.slice(-30),9),e21=ema(closes.slice(-50),21),rv=rsi(closes),adx=strength(c),m=macd(closes);
  const bullish=last.close>last.open,bearish=last.close<last.open;
+ const macdBull=m.line>m.signal&&m.line>0,macdBear=m.line<m.signal&&m.line<0;
+ const macdState=macdBull?'Bullish':macdBear?'Bearish':'Mixed';
  let score=0,side='NO TRADE';
- if(e9>e21&&rv>=52&&rv<=70&&adx>=18&&bullish&&last.close>prev.high){side='CALL';score=75}
- else if(e9<e21&&rv<=48&&rv>=30&&adx>=18&&bearish&&last.close<prev.low){side='PUT';score=75}
- return {pair,side,score,rsi:rv,adx,time:last.time,price:last.close};
+ if(e9>e21&&rv>=52&&rv<=70&&adx>=18&&bullish&&last.close>prev.high&&macdBull){side='CALL';score=75}
+ else if(e9<e21&&rv<=48&&rv>=30&&adx>=18&&bearish&&last.close<prev.low&&macdBear){side='PUT';score=75}
+ return {pair,side,score,rsi:rv,adx,time:last.time,price:last.close,macdState,macdLine:m.line,macdSignal:m.signal};
 }
 async function scan(){
  const key=(()=>{try{return localStorage.getItem('tdkey')||$('key').value.trim()}catch(e){return $('key').value.trim()}})();if(!key){say('API key डालें और Key सेव करें।');return}
  $('scan').disabled=true;$('auto').disabled=true;say('Market data जाँचा जा रहा है…');$('results').innerHTML='';
  let html='';
  for(const p of pairs){
-  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+(x.side==='CALL'?'Bullish':x.side==='PUT'?'Bearish':'Mixed')+' • '+x.time+' UTC</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
+  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • '+x.time+' UTC</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
   catch(e){html+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,90)+'</div></div><div class="wait">डेटा नहीं</div></div>'}
   $('results').innerHTML=html;
  }
