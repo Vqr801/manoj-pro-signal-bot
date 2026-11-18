@@ -19,7 +19,7 @@
 <div id="status" class="status">पहले API key डालें।</div>
 </div>
 <div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">चुने हुए समय के مطابق जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
-<div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, MACD (12/26/9), ADX-जैसी trend strength के साथ अब Supertrend (ATR 10, factor 3), Bollinger Bands (20, 2) और Stochastic (14) की पुष्टि भी शामिल है। 90/100 से कम स्कोर, ADX 25 से कम, कमजोर ट्रेंड, विपरीत MACD या breakout/candle confirmation न मिलने पर NO TRADE। सिग्नल के साथ पिछली candles पर उसी नियम की ऐतिहासिक जीत दर दिखाई जाती है (कम-से-कम 5 पुराने सिग्नल)। यह भविष्य की जीत की संभावना नहीं है; नमूना छोटा हो सकता है और लाभ/accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
+<div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, MACD (12/26/9), ADX-जैसी trend strength के साथ अब Supertrend (ATR 10, factor 3), Bollinger Bands (20, 2) और Stochastic (14) की पुष्टि भी शामिल है। 80/100 से कम स्कोर, ADX 20 से कम, कमजोर ट्रेंड, विपरीत MACD या candle confirmation न मिलने पर NO TRADE। मजबूत EMA और MACD दिशा जरूरी रहेगी; breakout bonus है, अनिवार्य शर्त नहीं। सिग्नल के साथ पिछली candles पर उसी नियम की ऐतिहासिक जीत दर दिखाई जाती है (कम-से-कम 5 पुराने सिग्नल)। यह भविष्य की जीत की संभावना नहीं है; नमूना छोटा हो सकता है और लाभ/accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
 </main>
 <script>
 const pairs=['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD'];
@@ -56,8 +56,8 @@ function historicalWinRate(c){
   if(sk>=55&&sk<=80)call+=10;if(sk<=45&&sk>=20)put+=10;
   if(!(a>0&&(a/last.close*100)>0.001))continue;
   let side='';
-  if(call>=90&&call>put+20&&mb&&up&&adx>=25&&bull&&last.close>prev.high)side='CALL';
-  else if(put>=90&&put>call+20&&ms&&dn&&adx>=25&&bear&&last.close<prev.low)side='PUT';
+  if(call>=80&&call>put+15&&mb&&up&&adx>=20&&bull)side='CALL';
+  else if(put>=80&&put>call+15&&ms&&dn&&adx>=20&&bear)side='PUT';
   if(!side)continue;
   total++;
   const next=c[i+1].close;
@@ -96,8 +96,8 @@ async function one(pair,key){
  if(stoch>=55&&stoch<=80)call+=10;if(stoch<=45&&stoch>=20)put+=10;
  if(!volOk){call=0;put=0;}
  const score=Math.max(call,put);let side='NO TRADE';
- if(call>=90&&call>put+20&&macdBull&&up&&adx>=25&&bullish&&last.close>prev.high)side='CALL';
- else if(put>=90&&put>call+20&&macdBear&&down&&adx>=25&&bearish&&last.close<prev.low)side='PUT';
+ if(call>=80&&call>put+15&&macdBull&&up&&adx>=20&&bullish)side='CALL';
+ else if(put>=80&&put>call+15&&macdBear&&down&&adx>=20&&bearish)side='PUT';
  const history=historicalWinRate(c);
  const candleCloseUtc=new Date(Date.parse(last.time.replace(' ','T')+'Z')+minutes*60000).toISOString().slice(0,19).replace('T',' ');
  const scanUtc=new Date().toISOString().slice(0,19).replace('T',' ');
