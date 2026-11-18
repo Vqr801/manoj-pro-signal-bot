@@ -77,7 +77,7 @@ async function scan(){
  const selected=$('pair').value;
  const scanPairs=selected==='ALL'?pairs:[selected];
  for(const p of scanPairs){
-  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • Stoch '+x.stoch.toFixed(0)+' • Supertrend '+x.supertrend+' • BB '+x.bbState+' • Score '+x.score+'/100 • '+x.time+' UTC</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
+  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • Stoch '+x.stoch.toFixed(0)+' • Supertrend '+x.supertrend+' • BB '+x.bbState+' • Score '+x.score+'/100 • '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.time.replace(' ','T')+'Z'))+' IST</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
   catch(e){html+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,90)+'</div></div><div class="wait">डेटा नहीं</div></div>'}
   $('results').innerHTML=html;
  }
