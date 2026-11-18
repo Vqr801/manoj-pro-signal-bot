@@ -19,7 +19,7 @@
 <div id="status" class="status">पहले API key डालें।</div>
 </div>
 <div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">चुने हुए समय के مطابق जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
-<div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, ADX-जैसी trend strength, MACD (12/26/9) की दिशा-पुष्टि और पिछली बंद candle की दिशा। CALL के लिए MACD bullish और PUT के लिए MACD bearish होना भी जरूरी है। कमज़ोर या मिले-जुले संकेत पर NO TRADE। यह केवल शैक्षिक संकेतक है, लाभ या 85% accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
+<div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, MACD (12/26/9), ADX-जैसी trend strength के साथ अब Supertrend (ATR 10, factor 3), Bollinger Bands (20, 2) और Stochastic (14) की पुष्टि भी शामिल है। 80/100 से कम स्कोर, कमजोर ट्रेंड, विपरीत MACD या अपर्याप्त volatility पर NO TRADE। यह केवल शैक्षिक संकेतक है, लाभ या 85% accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
 </main>
 <script>
 const pairs=['EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','USD/CAD','NZD/USD','EUR/JPY','GBP/JPY','EUR/GBP','AUD/JPY','EUR/CHF'];
@@ -31,6 +31,10 @@ function ema(a,n){let k=2/(n+1),v=a[0];for(let i=1;i<a.length;i++)v=a[i]*k+v*(1-
 function rsi(a){let g=0,l=0;for(let i=a.length-14;i<a.length;i++){let d=a[i]-a[i-1];if(d>0)g+=d;else l-=d}if(l===0)return 100;let rs=(g/14)/(l/14);return 100-100/(1+rs)}
 function strength(c){let tr=0,plus=0,minus=0;for(let i=c.length-14;i<c.length;i++){let x=c[i],p=c[i-1];let up=x.high-p.high,down=p.low-x.low;tr+=Math.max(x.high-x.low,Math.abs(x.high-p.close),Math.abs(x.low-p.close));if(up>down&&up>0)plus+=up;if(down>up&&down>0)minus+=down}if(!tr)return 0;return Math.abs(plus-minus)/tr*100}
 function macd(a){const line=[];for(let i=0;i<a.length;i++){const s=a.slice(0,i+1);line.push(ema(s,12)-ema(s,26));}const signal=ema(line.slice(-9),9);return {line:line[line.length-1],signal,previous:line[line.length-2]};}
+function atr(c,n=10){let tr=[];for(let i=1;i<c.length;i++){const x=c[i],p=c[i-1];tr.push(Math.max(x.high-x.low,Math.abs(x.high-p.close),Math.abs(x.low-p.close)));}return tr.slice(-n).reduce((a,b)=>a+b,0)/Math.min(n,tr.length)}
+function supertrend(c,n=10,mult=3){let a=atr(c,n),mid=(c[c.length-1].high+c[c.length-1].low)/2;return {line:mid-mult*a,atr:a,up:c[c.length-1].close>mid-mult*a};}
+function bollinger(a,n=20){const v=a.slice(-n),mean=v.reduce((x,y)=>x+y,0)/v.length,sd=Math.sqrt(v.reduce((x,y)=>x+(y-mean)**2,0)/v.length);return {upper:mean+2*sd,middle:mean,lower:mean-2*sd};}
+function stochastic(c,n=14){const v=c.slice(-n),hi=Math.max(...v.map(x=>x.high)),lo=Math.min(...v.map(x=>x.low)),cl=c[c.length-1].close;return hi===lo?50:(cl-lo)/(hi-lo)*100;}
 async function one(pair,key){
  const minutes=Number($('tf').value);
  const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval=1min&outputsize=500&timezone=UTC&apikey='+encodeURIComponent(key);
@@ -43,13 +47,28 @@ async function one(pair,key){
  if(c.length<30)throw Error('पर्याप्त candles नहीं');
  const closes=c.map(x=>x.close),last=c[c.length-1],prev=c[c.length-2];
  const e9=ema(closes.slice(-30),9),e21=ema(closes.slice(-50),21),rv=rsi(closes),adx=strength(c),m=macd(closes);
+ const bb=bollinger(closes),stoch=stochastic(c),st=supertrend(c),a=st.atr;
  const bullish=last.close>last.open,bearish=last.close<last.open;
  const macdBull=m.line>m.signal&&m.line>0,macdBear=m.line<m.signal&&m.line<0;
  const macdState=macdBull?'Bullish':macdBear?'Bearish':'Mixed';
- let score=0,side='NO TRADE';
- if(e9>e21&&rv>=52&&rv<=70&&adx>=18&&bullish&&last.close>prev.high&&macdBull){side='CALL';score=75}
- else if(e9<e21&&rv<=48&&rv>=30&&adx>=18&&bearish&&last.close<prev.low&&macdBear){side='PUT';score=75}
- return {pair,side,score,rsi:rv,adx,time:last.time,price:last.close,macdState,macdLine:m.line,macdSignal:m.signal};
+ const up=e9>e21&&last.close>e21,down=e9<e21&&last.close<e21;
+ const volOk=a>0&&(a/last.close*100)>0.001;
+ let call=0,put=0;
+ if(up)call+=15;if(down)put+=15;
+ if(rv>=52&&rv<=70)call+=10;if(rv<=48&&rv>=30)put+=10;
+ if(adx>=20){if(up)call+=10;if(down)put+=10;}
+ if(macdBull)call+=15;if(macdBear)put+=15;
+ if(bullish)call+=5;if(bearish)put+=5;
+ if(last.close>prev.high)call+=10;if(last.close<prev.low)put+=10;
+ if(st.up)call+=15;else put+=15;
+ if(last.close>bb.middle&&last.close<bb.upper)call+=10;
+ if(last.close<bb.middle&&last.close>bb.lower)put+=10;
+ if(stoch>=55&&stoch<=85)call+=10;if(stoch<=45&&stoch>=15)put+=10;
+ if(!volOk){call=0;put=0;}
+ const score=Math.max(call,put);let side='NO TRADE';
+ if(call>=80&&call>put+10&&macdBull&&up&&adx>=20)side='CALL';
+ else if(put>=80&&put>call+10&&macdBear&&down&&adx>=20)side='PUT';
+ return {pair,side,score,rsi:rv,adx,time:last.time,price:last.close,macdState,stoch,supertrend:st.up?'Bullish':'Bearish',bbState:last.close>bb.upper?'Upper breakout':last.close<bb.lower?'Lower breakout':'Inside bands'};
 }
 async function scan(){
  const key=(()=>{try{return localStorage.getItem('tdkey')||$('key').value.trim()}catch(e){return $('key').value.trim()}})();if(!key){say('API key डालें और Key सेव करें।');return}
@@ -58,7 +77,7 @@ async function scan(){
  const selected=$('pair').value;
  const scanPairs=selected==='ALL'?pairs:[selected];
  for(const p of scanPairs){
-  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • '+x.time+' UTC</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
+  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • Stoch '+x.stoch.toFixed(0)+' • Supertrend '+x.supertrend+' • BB '+x.bbState+' • Score '+x.score+'/100 • '+x.time+' UTC</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
   catch(e){html+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,90)+'</div></div><div class="wait">डेटा नहीं</div></div>'}
   $('results').innerHTML=html;
  }
