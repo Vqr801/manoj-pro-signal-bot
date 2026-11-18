@@ -19,7 +19,7 @@
 <div id="status" class="status">पहले API key डालें।</div>
 </div>
 <div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">चुने हुए समय के مطابق जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
-<div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, MACD (12/26/9), ADX-जैसी trend strength के साथ अब Supertrend (ATR 10, factor 3), Bollinger Bands (20, 2) और Stochastic (14) की पुष्टि भी शामिल है। 90/100 से कम स्कोर, ADX 25 से कम, कमजोर ट्रेंड, विपरीत MACD या breakout/candle confirmation न मिलने पर NO TRADE। यह केवल शैक्षिक संकेतक है, लाभ या 85% accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
+<div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, MACD (12/26/9), ADX-जैसी trend strength के साथ अब Supertrend (ATR 10, factor 3), Bollinger Bands (20, 2) और Stochastic (14) की पुष्टि भी शामिल है। 90/100 से कम स्कोर, ADX 25 से कम, कमजोर ट्रेंड, विपरीत MACD या breakout/candle confirmation न मिलने पर NO TRADE। सिग्नल के साथ पिछली candles पर उसी नियम की ऐतिहासिक जीत दर दिखाई जाती है (कम-से-कम 5 पुराने सिग्नल)। यह भविष्य की जीत की संभावना नहीं है; नमूना छोटा हो सकता है और लाभ/accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
 </main>
 <script>
 const pairs=['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD'];
@@ -37,6 +37,34 @@ function atr(c,n=10){let tr=[];for(let i=1;i<c.length;i++){const x=c[i],p=c[i-1]
 function supertrend(c,n=10,mult=3){let a=atr(c,n),mid=(c[c.length-1].high+c[c.length-1].low)/2;return {line:mid-mult*a,atr:a,up:c[c.length-1].close>mid-mult*a};}
 function bollinger(a,n=20){const v=a.slice(-n),mean=v.reduce((x,y)=>x+y,0)/v.length,sd=Math.sqrt(v.reduce((x,y)=>x+(y-mean)**2,0)/v.length);return {upper:mean+2*sd,middle:mean,lower:mean-2*sd};}
 function stochastic(c,n=14){const v=c.slice(-n),hi=Math.max(...v.map(x=>x.high)),lo=Math.min(...v.map(x=>x.low)),cl=c[c.length-1].close;return hi===lo?50:(cl-lo)/(hi-lo)*100;}
+function historicalWinRate(c){
+ let wins=0,total=0;
+ for(let i=55;i<c.length-1;i++){
+  const h=c.slice(0,i+1),cl=h.map(x=>x.close),last=h[h.length-1],prev=h[h.length-2];
+  const e9=ema(cl.slice(-30),9),e21=ema(cl.slice(-50),21),rv=rsi(cl),adx=strength(h),m=macd(cl),bb=bollinger(cl),sk=stochastic(h),st=supertrend(h),a=st.atr;
+  const bull=last.close>last.open,bear=last.close<last.open,mb=m.line>m.signal&&m.line>0,ms=m.line<m.signal&&m.line<0,up=e9>e21&&last.close>e21,dn=e9<e21&&last.close<e21;
+  let call=0,put=0;
+  if(up)call+=15;if(dn)put+=15;
+  if(rv>=55&&rv<=68)call+=10;if(rv<=45&&rv>=32)put+=10;
+  if(adx>=20){if(up)call+=10;if(dn)put+=10;}
+  if(mb)call+=15;if(ms)put+=15;
+  if(bull)call+=5;if(bear)put+=5;
+  if(last.close>prev.high)call+=10;if(last.close<prev.low)put+=10;
+  if(st.up)call+=15;else put+=15;
+  if(last.close>bb.middle&&last.close<bb.upper)call+=10;
+  if(last.close<bb.middle&&last.close>bb.lower)put+=10;
+  if(sk>=55&&sk<=80)call+=10;if(sk<=45&&sk>=20)put+=10;
+  if(!(a>0&&(a/last.close*100)>0.001))continue;
+  let side='';
+  if(call>=90&&call>put+20&&mb&&up&&adx>=25&&bull&&last.close>prev.high)side='CALL';
+  else if(put>=90&&put>call+20&&ms&&dn&&adx>=25&&bear&&last.close<prev.low)side='PUT';
+  if(!side)continue;
+  total++;
+  const next=c[i+1].close;
+  if((side==='CALL'&&next>last.close)||(side==='PUT'&&next<last.close))wins++;
+ }
+ return {wins,total,rate:total?Math.round(wins/total*100):null};
+}
 async function one(pair,key){
  const minutes=Number($('tf').value);
  const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval=1min&outputsize=500&timezone=UTC&apikey='+encodeURIComponent(key);
@@ -70,7 +98,7 @@ async function one(pair,key){
  const score=Math.max(call,put);let side='NO TRADE';
  if(call>=90&&call>put+20&&macdBull&&up&&adx>=25&&bullish&&last.close>prev.high)side='CALL';
  else if(put>=90&&put>call+20&&macdBear&&down&&adx>=25&&bearish&&last.close<prev.low)side='PUT';
- return {pair,side,score,rsi:rv,adx,time:last.time,price:last.close,macdState,stoch,supertrend:st.up?'Bullish':'Bearish',bbState:last.close>bb.upper?'Upper breakout':last.close<bb.lower?'Lower breakout':'Inside bands'};
+ const history=historicalWinRate(c);\n return {pair,side,score,rsi:rv,adx,time:last.time,price:last.close,macdState,stoch,supertrend:st.up?'Bullish':'Bearish',bbState:last.close>bb.upper?'Upper breakout':last.close<bb.lower?'Lower breakout':'Inside bands',history};
 }
 async function scan(){
  const key=(()=>{try{return localStorage.getItem('tdkey')||$('key').value.trim()}catch(e){return $('key').value.trim()}})();if(!key){say('API key डालें और Key सेव करें।');return}
@@ -79,7 +107,7 @@ async function scan(){
  const selected=$('pair').value;
  const scanPairs=selected==='ALL'?pairs:[selected];
  for(const p of scanPairs){
-  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • Stoch '+x.stoch.toFixed(0)+' • Supertrend '+x.supertrend+' • BB '+x.bbState+' • Score '+x.score+'/100 • '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.time.replace(' ','T')+'Z'))+' IST</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
+  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • Stoch '+x.stoch.toFixed(0)+' • Supertrend '+x.supertrend+' • BB '+x.bbState+' • Score '+x.score+'/100 • ऐतिहासिक जीत दर: '+(x.history.total>=5?x.history.rate+'% ('+x.history.wins+'/'+x.history.total+')':'पर्याप्त डेटा नहीं')+' • '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.time.replace(' ','T')+'Z'))+' IST</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
   catch(e){html+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,90)+'</div></div><div class="wait">डेटा नहीं</div></div>'}
   $('results').innerHTML=html;
  }
