@@ -99,7 +99,9 @@ async function one(pair,key){
  if(call>=90&&call>put+20&&macdBull&&up&&adx>=25&&bullish&&last.close>prev.high)side='CALL';
  else if(put>=90&&put>call+20&&macdBear&&down&&adx>=25&&bearish&&last.close<prev.low)side='PUT';
  const history=historicalWinRate(c);
- return {pair,side,score,rsi:rv,adx,time:last.time,price:last.close,macdState,stoch,supertrend:st.up?'Bullish':'Bearish',bbState:last.close>bb.upper?'Upper breakout':last.close<bb.lower?'Lower breakout':'Inside bands',history};
+ const candleCloseUtc=new Date(Date.parse(last.time.replace(' ','T')+'Z')+minutes*60000).toISOString().slice(0,19).replace('T',' ');
+ const scanUtc=new Date().toISOString().slice(0,19).replace('T',' ');
+ return {pair,side,score,rsi:rv,adx,time:candleCloseUtc,scanTime:scanUtc,price:last.close,macdState,stoch,supertrend:st.up?'Bullish':'Bearish',bbState:last.close>bb.upper?'Upper breakout':last.close<bb.lower?'Lower breakout':'Inside bands',history};
 }
 async function scan(){
  const key=(()=>{try{return localStorage.getItem('tdkey')||$('key').value.trim()}catch(e){return $('key').value.trim()}})();if(!key){say('API key डालें और Key सेव करें।');return}
@@ -108,7 +110,7 @@ async function scan(){
  const selected=$('pair').value;
  const scanPairs=selected==='ALL'?pairs:[selected];
  for(const p of scanPairs){
-  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • Stoch '+x.stoch.toFixed(0)+' • Supertrend '+x.supertrend+' • BB '+x.bbState+' • Score '+x.score+'/100 • ऐतिहासिक जीत दर: '+(x.history.total>=5?x.history.rate+'% ('+x.history.wins+'/'+x.history.total+')':'पर्याप्त डेटा नहीं')+' • '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.time.replace(' ','T')+'Z'))+' IST</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
+  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • Stoch '+x.stoch.toFixed(0)+' • Supertrend '+x.supertrend+' • BB '+x.bbState+' • Score '+x.score+'/100 • ऐतिहासिक जीत दर: '+(x.history.total>=5?x.history.rate+'% ('+x.history.wins+'/'+x.history.total+')':'पर्याप्त डेटा नहीं')+' • '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.time.replace(' ','T')+'Z'))+' IST • Scan: '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.scanTime.replace(' ','T')+'Z'))+' IST</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
   catch(e){html+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,90)+'</div></div><div class="wait">डेटा नहीं</div></div>'}
   $('results').innerHTML=html;
  }
