@@ -8,7 +8,7 @@
 </style>
 </head>
 <body>
-<header><h1>MANOJ PRO SIGNAL BOT</h1><p>1 से 5 मिनट Forex Signal • भारतीय समय (IST) • CALL / PUT / NO TRADE</p></header>
+<header><h1>MANOJ PRO SIGNAL BOT</h1><p>5 मिनट High Confidence Forex Signal • भारतीय समय (IST) • CALL / PUT / NO TRADE</p></header>
 <main class="wrap">
 <div class="card">
 <label for="key">Twelve Data API Key</label>
@@ -24,6 +24,8 @@
 <script>
 const pairs=['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD'];
 const $=id=>document.getElementById(id);let timer=null;
+// इस बॉट का डिफॉल्ट सिग्नल टाइम 5 मिनट रखें
+$('tf').value='5';
 try{$('key').value=localStorage.getItem('tdkey')||'';}catch(e){say('Browser storage बंद है। Site settings में storage/cookies allow करें।')}
 function say(t){$('status').textContent=t}
 $('save').onclick=()=>{const k=$('key').value.trim();if(!k){say('पहले API key डालें।');return}try{localStorage.setItem('tdkey',k);say('Key इस browser में सेव हो गई। अब पेज Refresh करने पर भी रहेगी।')}catch(e){say('Key सेव नहीं हुई। Browser की Site settings में storage/cookies allow करें और फिर कोशिश करें।')}};
