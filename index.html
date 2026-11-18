@@ -23,7 +23,7 @@
 </main>
 <script>
 const pairs=['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD'];
-const $=id=>document.getElementById(id);let timer=null;
+const $=id=>document.getElementById(id);let timer=null,scanBusy=false,lastAutoBoundary=0;
 // इस बॉट का डिफॉल्ट सिग्नल टाइम 5 मिनट रखें
 $('tf').value='5';
 try{$('key').value=localStorage.getItem('tdkey')||'';}catch(e){say('Browser storage बंद है। Site settings में storage/cookies allow करें।')}
@@ -104,7 +104,9 @@ async function one(pair,key){
  return {pair,side,score,rsi:rv,adx,time:candleCloseUtc,scanTime:scanUtc,price:last.close,macdState,stoch,supertrend:st.up?'Bullish':'Bearish',bbState:last.close>bb.upper?'Upper breakout':last.close<bb.lower?'Lower breakout':'Inside bands',history};
 }
 async function scan(){
+ if(scanBusy)return;
  const key=(()=>{try{return localStorage.getItem('tdkey')||$('key').value.trim()}catch(e){return $('key').value.trim()}})();if(!key){say('API key डालें और Key सेव करें।');return}
+ scanBusy=true;
  $('scan').disabled=true;$('auto').disabled=true;say('Market data जाँचा जा रहा है…');$('results').innerHTML='';
  let html='';
  const selected=$('pair').value;
@@ -114,10 +116,37 @@ async function scan(){
   catch(e){html+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,90)+'</div></div><div class="wait">डेटा नहीं</div></div>'}
   $('results').innerHTML=html;
  }
- say('Scan पूरा हुआ ('+ $('tf').value +' मिनट)। Auto Scan हर चुने हुए समय पर होगा।');$('scan').disabled=false;$('auto').disabled=false;
+ say('Scan पूरा हुआ ('+ $('tf').value +' मिनट)। अगला Auto Scan अगली पूरी कैंडल बंद होने के तुरंत बाद होगा।');$('scan').disabled=false;$('auto').disabled=false;scanBusy=false;
 }
 $('scan').onclick=scan;
-$('tf').addEventListener('change',()=>{if(timer){clearInterval(timer);timer=setInterval(scan,Number($('tf').value)*60000);say('समय बदल गया। Auto Scan अब हर '+$('tf').value+' मिनट में होगा।');}});
-$('auto').onclick=()=>{if(timer){clearInterval(timer);timer=null;$('auto').textContent='Auto Scan चालू करें';say('Auto Scan बंद है।')}else{if(!$('key').value.trim()&&!(()=>{try{return localStorage.getItem('tdkey')}catch(e){return ''}})()){say('पहले API key डालें।');return}try{localStorage.setItem('tdkey',$('key').value.trim()||localStorage.getItem('tdkey')||'')}catch(e){say('Browser storage की अनुमति दें।');return}scan();timer=setInterval(scan,Number($('tf').value)*60000);$('auto').textContent='Auto Scan बंद करें';}};
+function startBoundaryAutoScan(){
+ if(timer){clearInterval(timer);timer=null;}
+ lastAutoBoundary=0;
+ const check=()=>{
+  const step=Number($('tf').value)*60000;
+  const now=Date.now();
+  const boundary=Math.floor(now/step)*step;
+  // हर नई कैंडल बंद होने के 8 सेकंड बाद केवल एक बार स्कैन करें
+  if(now>=boundary+8000&&boundary>lastAutoBoundary&&!scanBusy){
+   lastAutoBoundary=boundary;
+   scan();
+  }
+ };
+ check();
+ timer=setInterval(check,5000);
+}
+$('tf').addEventListener('change',()=>{
+ if(timer){startBoundaryAutoScan();say('समय बदल गया। अब '+$('tf').value+' मिनट की हर पूरी कैंडल बंद होने के बाद स्कैन होगा।');}
+});
+$('auto').onclick=()=>{
+ if(timer){clearInterval(timer);timer=null;$('auto').textContent='Auto Scan चालू करें';say('Auto Scan बंद है।');}
+ else{
+  if(!$('key').value.trim()&&!(()=>{try{return localStorage.getItem('tdkey')}catch(e){return ''}})()){say('पहले API key डालें।');return}
+  try{localStorage.setItem('tdkey',$('key').value.trim()||localStorage.getItem('tdkey')||'')}catch(e){say('Browser storage की अनुमति दें।');return}
+  $('auto').textContent='Auto Scan बंद करें';
+  startBoundaryAutoScan();
+  say('Auto Scan चालू: हर कैंडल बंद होने के लगभग 8 सेकंड बाद स्कैन होगा।');
+ }
+};
 </script>
 </body></html>
