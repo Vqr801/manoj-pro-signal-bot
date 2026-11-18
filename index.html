@@ -8,13 +8,13 @@
 </style>
 </head>
 <body>
-<header><h1>MANOJ PRO SIGNAL BOT</h1><p>1 से 5 मिनट Forex Signal • CALL / PUT / NO TRADE</p></header>
+<header><h1>MANOJ PRO SIGNAL BOT</h1><p>1 से 5 मिनट Forex Signal • भारतीय समय (IST) • CALL / PUT / NO TRADE</p></header>
 <main class="wrap">
 <div class="card">
 <label for="key">Twelve Data API Key</label>
 <input id="key" type="password" autocomplete="off" placeholder="अपनी API key यहाँ डालें">
 <div class="muted warning">सुरक्षा: API key इसी browser के local storage में सेव होगी, सार्वजनिक HTML में नहीं। यह browser में देखी जा सकती है और API provider को भेजी जाती है। साझा मोबाइल पर सेव न करें।</div>
-<label for="pair" style="margin-top:14px">अपनी करेंसी चुनें</label><select id="pair" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="ALL">सभी करेंसी</option><option value="EUR/USD">EUR/USD</option><option value="GBP/USD">GBP/USD</option><option value="USD/JPY">USD/JPY</option><option value="USD/CHF">USD/CHF</option><option value="AUD/USD">AUD/USD</option><option value="USD/CAD">USD/CAD</option><option value="NZD/USD">NZD/USD</option><option value="EUR/JPY">EUR/JPY</option><option value="GBP/JPY">GBP/JPY</option><option value="EUR/GBP">EUR/GBP</option><option value="AUD/JPY">AUD/JPY</option><option value="EUR/CHF">EUR/CHF</option></select>
+<label for="pair" style="margin-top:14px">टॉप 5 करेंसी चुनें</label><select id="pair" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="ALL">टॉप 5 करेंसी</option><option value="EUR/USD">EUR/USD</option><option value="GBP/USD">GBP/USD</option><option value="USD/JPY">USD/JPY</option><option value="AUD/USD">AUD/USD</option><option value="USD/CAD">USD/CAD</option></select>
 <label for="tf" style="margin-top:14px">सिग्नल का समय चुनें</label><select id="tf" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="1">1 मिनट</option><option value="2">2 मिनट</option><option value="3">3 मिनट</option><option value="4">4 मिनट</option><option value="5" selected>5 मिनट</option></select><div class="top"><button id="save">Key सेव करें</button><button id="scan">अभी Scan करें</button></div>
 <div id="status" class="status">पहले API key डालें।</div>
 </div>
@@ -22,7 +22,7 @@
 <div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, MACD (12/26/9), ADX-जैसी trend strength के साथ अब Supertrend (ATR 10, factor 3), Bollinger Bands (20, 2) और Stochastic (14) की पुष्टि भी शामिल है। 80/100 से कम स्कोर, कमजोर ट्रेंड, विपरीत MACD या अपर्याप्त volatility पर NO TRADE। यह केवल शैक्षिक संकेतक है, लाभ या 85% accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
 </main>
 <script>
-const pairs=['EUR/USD','GBP/USD','USD/JPY','USD/CHF','AUD/USD','USD/CAD','NZD/USD','EUR/JPY','GBP/JPY','EUR/GBP','AUD/JPY','EUR/CHF'];
+const pairs=['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD'];
 const $=id=>document.getElementById(id);let timer=null;
 try{$('key').value=localStorage.getItem('tdkey')||'';}catch(e){say('Browser storage बंद है। Site settings में storage/cookies allow करें।')}
 function say(t){$('status').textContent=t}
