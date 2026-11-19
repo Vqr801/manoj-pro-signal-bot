@@ -40,6 +40,13 @@
 <div id="status" class="status">पहले API key डालें।</div>
 </div>
 <div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">चुने हुए समय के अनुसार जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
+<div class="card">
+<h3 style="margin:0 0 10px;color:#68e0bd">Signal History & Performance</h3>
+<div id="performance" class="status">अभी कोई रिकॉर्ड नहीं।</div>
+<div id="history"><p class="muted">सिग्नल आने पर हिस्ट्री यहाँ दिखेगी।</p></div>
+<button id="clearHistory" type="button" style="background:#713b48;color:#fff">हिस्ट्री साफ़ करें</button>
+<p class="small warning">ऑटो WIN/LOSS Twelve Data के भाव से अनुमानित होगा। Quotex के भावों से अंतर हो सकता है; इसे वास्तविक ट्रेड परिणाम न मानें।</p>
+</div>
 <div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, MACD (12/26/9), ADX-जैसी trend strength के साथ अब Supertrend (ATR 10, factor 3), Bollinger Bands (20, 2) और Stochastic (14) की पुष्टि भी शामिल है। 80/100 से कम स्कोर, ADX 20 से कम, कमजोर ट्रेंड, विपरीत MACD या candle confirmation न मिलने पर NO TRADE। मजबूत EMA और MACD दिशा जरूरी रहेगी; breakout bonus है, अनिवार्य शर्त नहीं। सिग्नल के साथ पिछली candles पर उसी नियम की ऐतिहासिक जीत दर दिखाई जाती है (कम-से-कम 5 पुराने सिग्नल)। यह भविष्य की जीत की संभावना नहीं है; नमूना छोटा हो सकता है और लाभ/accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
 </main>
 <script>
@@ -86,6 +93,36 @@ function historicalWinRate(c){
  }
  return {wins,total,rate:total?Math.round(wins/total*100):null};
 }
+
+const HISTORY_KEY='prox_signal_history_v1';
+function readHistory(){try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch(e){return []}}
+function writeHistory(items){try{localStorage.setItem(HISTORY_KEY,JSON.stringify(items.slice(0,200)))}catch(e){say('हिस्ट्री सेव नहीं हो सकी। Browser storage allow करें।')}}
+function recordSignal(x){
+ const tf=Number($('tf').value),items=readHistory();
+ const id=[x.pair,tf,x.time,x.side].join('|');
+ if(items.some(z=>z.id===id))return;
+ items.unshift({id,pair:x.pair,tf,side:x.side,entry:x.price,createdAt:Date.now(),expiresAt:Date.now()+tf*60000,result:x.side==='NO TRADE'?'NO TRADE':'PENDING',exit:null,source:'Twelve Data'});
+ writeHistory(items);renderHistory();
+}
+function settleSignals(pair,price){
+ const now=Date.now(),items=readHistory();let changed=false;
+ for(const s of items){
+  if(s.pair!==pair||s.result!=='PENDING'||now<s.expiresAt)continue;
+  s.exit=price;
+  if(price===s.entry)s.result='DRAW';
+  else if(s.side==='CALL')s.result=price>s.entry?'WIN':'LOSS';
+  else if(s.side==='PUT')s.result=price<s.entry?'WIN':'LOSS';
+  changed=true;
+ }
+ if(changed){writeHistory(items);renderHistory();}
+}
+function renderHistory(){
+ const items=readHistory(),done=items.filter(x=>x.result==='WIN'||x.result==='LOSS'),wins=done.filter(x=>x.result==='WIN').length,losses=done.length-wins,rate=done.length?Math.round(wins/done.length*100):null;
+ $('performance').innerHTML='<b>कुल रिकॉर्ड:</b> '+items.length+' / 200 &nbsp; <b>WIN:</b> '+wins+' &nbsp; <b>LOSS:</b> '+losses+' &nbsp; <b>Pending:</b> '+items.filter(x=>x.result==='PENDING').length+'<br><b>निर्णीत सिग्नल पर Win Rate:</b> '+(rate===null?'अभी उपलब्ध नहीं':rate+'%')+'<div class="small">DRAW और NO TRADE को Win Rate में नहीं गिना गया।</div>';
+ $('history').innerHTML=items.length?items.slice(0,30).map(s=>'<div class="row"><div><b>'+s.pair+'</b> · '+s.tf+' मिनट · '+s.side+'<div class="small">Entry: '+s.entry+(s.exit===null?'':' · Exit: '+s.exit)+' · '+new Date(s.createdAt).toLocaleString('en-IN')+'</div></div><div class="'+(s.result==='WIN'?'call':s.result==='LOSS'?'put':'wait')+'">'+s.result+'</div></div>').join(''):'<p class="muted">अभी कोई रिकॉर्ड नहीं।</p>';
+}
+$('clearHistory').onclick=()=>{if(confirm('क्या आप पूरी Signal History साफ़ करना चाहते हैं?')){writeHistory([]);renderHistory();}};
+renderHistory();
 async function one(pair,key){
  const minutes=Number($('tf').value);
  const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval=1min&outputsize=500&timezone=UTC&apikey='+encodeURIComponent(key);
@@ -132,7 +169,7 @@ async function scan(){
  const selected=$('pair').value;
  const scanPairs=selected==='ALL'?pairs:[selected];
  for(const p of scanPairs){
-  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • Stoch '+x.stoch.toFixed(0)+' • Supertrend '+x.supertrend+' • BB '+x.bbState+' • Score '+x.score+'/100 • ऐतिहासिक जीत दर: '+(x.history.total>=5?x.history.rate+'% ('+x.history.wins+'/'+x.history.total+')':'पर्याप्त डेटा नहीं')+' • '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.time.replace(' ','T')+'Z'))+' IST • Scan: '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.scanTime.replace(' ','T')+'Z'))+' IST</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
+  try{const x=await one(p,key);recordSignal(x);settleSignals(p,x.price);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • Stoch '+x.stoch.toFixed(0)+' • Supertrend '+x.supertrend+' • BB '+x.bbState+' • Score '+x.score+'/100 • ऐतिहासिक जीत दर: '+(x.history.total>=5?x.history.rate+'% ('+x.history.wins+'/'+x.history.total+')':'पर्याप्त डेटा नहीं')+' • '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.time.replace(' ','T')+'Z'))+' IST • Scan: '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.scanTime.replace(' ','T')+'Z'))+' IST</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
   catch(e){html+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,90)+'</div></div><div class="wait">डेटा नहीं</div></div>'}
   $('results').innerHTML=html;
  }
