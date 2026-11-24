@@ -41,11 +41,9 @@
 </div>
 <div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">चुने हुए समय के अनुसार जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
 <div class="card">
-<h3 style="margin:0 0 10px;color:#68e0bd">Signal History & Performance</h3>
-<div id="performance" class="status">अभी कोई रिकॉर्ड नहीं।</div>
-<div id="history"><p class="muted">सिग्नल आने पर हिस्ट्री यहाँ दिखेगी।</p></div>
-<button id="clearHistory" type="button" style="background:#713b48;color:#fff">हिस्ट्री साफ़ करें</button>
-<p class="small warning">एक्सपायरी के बाद Twelve Data के fresh quote से WIN/LOSS जाँचा जाएगा। ऐप खुला और इंटरनेट/API उपलब्ध रहना चाहिए। Quotex के भावों से अंतर हो सकता है; इसे वास्तविक ट्रेड परिणाम न मानें।</p>
+<h3 style="margin:0 0 10px;color:#68e0bd">अगली कैंडल: Green / Red संभावना</h3>
+<div id="probability" class="status">पहले Scan करें। चुने हुए टाइमफ्रेम की पिछली बंद candles के आधार पर अनुमान दिखेगा।</div>
+<p class="small warning">ये प्रतिशत हाल की अधिकतम 100 बंद candles में Green (Close > Open) और Red (Close < Open) के अनुपात हैं। यह ऐतिहासिक आवृत्ति है, भविष्य की गारंटी या प्रमाणित जीत-सम्भावना नहीं। डेटा कम होने पर अनुमान कम भरोसेमंद होगा।</p>
 </div>
 <div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, MACD (12/26/9), ADX-जैसी trend strength के साथ अब Supertrend (ATR 10, factor 3), Bollinger Bands (20, 2) और Stochastic (14) की पुष्टि भी शामिल है। 80/100 से कम स्कोर, ADX 20 से कम, कमजोर ट्रेंड, विपरीत MACD या candle confirmation न मिलने पर NO TRADE। मजबूत EMA और MACD दिशा जरूरी रहेगी; breakout bonus है, अनिवार्य शर्त नहीं। सिग्नल के साथ पिछली candles पर अगले 1-मिनट candle की ऐतिहासिक दिशा-दर दिखाई जाती है (कम-से-कम 5 पुराने सिग्नल); यह चुने गए expiry की जीत दर नहीं है। यह भविष्य की जीत की संभावना नहीं है; नमूना छोटा हो सकता है और लाभ/accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
 </main>
@@ -94,50 +92,6 @@ function historicalWinRate(c){
  return {wins,total,rate:total?Math.round(wins/total*100):null};
 }
 
-const HISTORY_KEY='prox_signal_history_v1';
-function readHistory(){try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch(e){return []}}
-function writeHistory(items){try{localStorage.setItem(HISTORY_KEY,JSON.stringify(items.slice(0,200)))}catch(e){say('हिस्ट्री सेव नहीं हो सकी। Browser storage allow करें।')}}
-function recordSignal(x){
- const tf=Number($('tf').value),items=readHistory();
- const id=[x.pair,tf,x.time,x.side].join('|');
- if(items.some(z=>z.id===id))return;
- items.unshift({id,pair:x.pair,tf,side:x.side,entry:x.price,createdAt:Date.now(),expiresAt:Date.now()+tf*60000,result:x.side==='NO TRADE'?'NO TRADE':'PENDING',exit:null,source:'Twelve Data'});
- writeHistory(items);renderHistory();
-}
-async function checkExpiredSignals(){
- const key=(()=>{try{return localStorage.getItem('tdkey')||$('key').value.trim()}catch(e){return $('key').value.trim()}})();
- if(!key)return;
- const now=Date.now(),items=readHistory();
- const due=[...new Set(items.filter(s=>s.result==='PENDING'&&now>=s.expiresAt).map(s=>s.pair))];
- for(const pair of due){
-  try{
-   const url='https://api.twelvedata.com/price?symbol='+encodeURIComponent(pair)+'&apikey='+encodeURIComponent(key);
-   const response=await fetch(url),data=await response.json();
-   const price=Number(data.price);
-   if(!response.ok||!Number.isFinite(price)||price<=0)continue;
-   let changed=false;
-   for(const s of items){
-    if(s.pair!==pair||s.result!=='PENDING'||now<s.expiresAt)continue;
-    s.exit=price;s.checkedAt=Date.now();
-    if(price===s.entry)s.result='DRAW';
-    else if(s.side==='CALL')s.result=price>s.entry?'WIN':'LOSS';
-    else if(s.side==='PUT')s.result=price<s.entry?'WIN':'LOSS';
-    changed=true;
-   }
-   if(changed){writeHistory(items);renderHistory();}
-  }catch(e){/* keep pending when live quote cannot be verified */}
- }
-}
-function renderHistory(){
- const items=readHistory(),done=items.filter(x=>x.result==='WIN'||x.result==='LOSS'),wins=done.filter(x=>x.result==='WIN').length,losses=done.length-wins,rate=done.length?Math.round(wins/done.length*100):null;
- $('performance').innerHTML='<b>कुल रिकॉर्ड:</b> '+items.length+' / 200 &nbsp; <b>WIN:</b> '+wins+' &nbsp; <b>LOSS:</b> '+losses+' &nbsp; <b>Pending:</b> '+items.filter(x=>x.result==='PENDING').length+'<br><b>निर्णीत सिग्नल पर Win Rate:</b> '+(rate===null?'अभी उपलब्ध नहीं':rate+'%')+'<div class="small">DRAW और NO TRADE को Win Rate में नहीं गिना गया।</div>';
- $('history').innerHTML=items.length?items.slice(0,30).map(s=>'<div class="row"><div><b>'+s.pair+'</b> · '+s.tf+' मिनट · '+s.side+'<div class="small">Entry: '+s.entry+(s.exit===null?'':' · Exit: '+s.exit)+' · '+new Date(s.createdAt).toLocaleString('en-IN')+'</div></div><div class="'+(s.result==='WIN'?'call':s.result==='LOSS'?'put':'wait')+'">'+s.result+'</div></div>').join(''):'<p class="muted">अभी कोई रिकॉर्ड नहीं।</p>';
-}
-$('clearHistory').onclick=()=>{if(confirm('क्या आप पूरी Signal History साफ़ करना चाहते हैं?')){writeHistory([]);renderHistory();}};
-renderHistory();
-// Expired signals are checked against a fresh quote while the app remains open.
-setInterval(checkExpiredSignals,10000);
-checkExpiredSignals();
 async function one(pair,key){
  const minutes=Number($('tf').value);
  const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval=1min&outputsize=500&timezone=UTC&apikey='+encodeURIComponent(key);
@@ -170,23 +124,29 @@ async function one(pair,key){
  const score=Math.max(call,put);let side='NO TRADE';
  if(call>=80&&call>put+15&&macdBull&&up&&adx>=20&&bullish)side='CALL';
  else if(put>=80&&put>call+15&&macdBear&&down&&adx>=20&&bearish)side='PUT';
- const history=historicalWinRate(c);
+ const sample=c.slice(-100);
+ const green=sample.filter(x=>x.close>x.open).length;
+ const red=sample.filter(x=>x.close<x.open).length;
+ const doji=sample.length-green-red;
+ const counted=green+red;
+ const odds={green:counted?Math.round(green/counted*100):0,red:counted?Math.round(red/counted*100):0,greenCount:green,redCount:red,doji,sample:sample.length,counted};
  const candleCloseUtc=new Date(Date.parse(last.time.replace(' ','T')+'Z')+minutes*60000).toISOString().slice(0,19).replace('T',' ');
  const scanUtc=new Date().toISOString().slice(0,19).replace('T',' ');
- return {pair,side,score,rsi:rv,adx,time:candleCloseUtc,scanTime:scanUtc,price:last.close,macdState,stoch,supertrend:st.up?'Bullish':'Bearish',bbState:last.close>bb.upper?'Upper breakout':last.close<bb.lower?'Lower breakout':'Inside bands',history};
+ return {pair,side,score,rsi:rv,adx,time:candleCloseUtc,scanTime:scanUtc,price:last.close,macdState,stoch,supertrend:st.up?'Bullish':'Bearish',bbState:last.close>bb.upper?'Upper breakout':last.close<bb.lower?'Lower breakout':'Inside bands',odds};
 }
 async function scan(){
  if(scanBusy)return;
  const key=(()=>{try{return localStorage.getItem('tdkey')||$('key').value.trim()}catch(e){return $('key').value.trim()}})();if(!key){say('API key डालें और Key सेव करें।');return}
  scanBusy=true;
  $('scan').disabled=true;$('auto').disabled=true;say('Market data जाँचा जा रहा है…');$('results').innerHTML='';
- let html='';
+ let html='',probabilityHtml='';
  const selected=$('pair').value;
  const scanPairs=selected==='ALL'?pairs:[selected];
  for(const p of scanPairs){
-  try{const x=await one(p,key);recordSignal(x);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • Stoch '+x.stoch.toFixed(0)+' • Supertrend '+x.supertrend+' • BB '+x.bbState+' • Score '+x.score+'/100 • ऐतिहासिक जीत दर: '+(x.history.total>=5?x.history.rate+'% ('+x.history.wins+'/'+x.history.total+')':'पर्याप्त डेटा नहीं')+' • '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.time.replace(' ','T')+'Z'))+' IST • Scan: '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.scanTime.replace(' ','T')+'Z'))+' IST</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
+  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • Stoch '+x.stoch.toFixed(0)+' • Supertrend '+x.supertrend+' • BB '+x.bbState+' • Score '+x.score+'/100 • '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.time.replace(' ','T')+'Z'))+' IST • Scan: '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.scanTime.replace(' ','T')+'Z'))+' IST</div></div><div class="'+cls+'">'+x.side+'</div></div>';probabilityHtml+='<div class="card" style="margin:8px 0;padding:12px"><b>'+x.pair+' · अगली '+$('tf').value+' मिनट की कैंडल</b><div class="top" style="gap:8px"><div style="flex:1;background:#103b30;border:1px solid #2d9c76;border-radius:10px;padding:12px;text-align:center"><div class="call">GREEN</div><div style="font-size:28px;font-weight:800">'+x.odds.green+'%</div><div class="small">'+x.odds.greenCount+' candles</div></div><div style="flex:1;background:#42252d;border:1px solid #bd6576;border-radius:10px;padding:12px;text-align:center"><div class="put">RED</div><div style="font-size:28px;font-weight:800">'+x.odds.red+'%</div><div class="small">'+x.odds.redCount+' candles</div></div></div><div class="small">नमूना: '+x.odds.counted+' candles'+(x.odds.doji?' · Doji: '+x.odds.doji:'')+'</div></div>'}
   catch(e){html+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,90)+'</div></div><div class="wait">डेटा नहीं</div></div>'}
   $('results').innerHTML=html;
+  $('probability').innerHTML=probabilityHtml||'इस बार संभावना निकालने के लिए पर्याप्त डेटा नहीं मिला।';
  }
  say('Scan पूरा हुआ ('+ $('tf').value +' मिनट)। अगला Auto Scan अगली पूरी कैंडल बंद होने के तुरंत बाद होगा।');$('scan').disabled=false;$('auto').disabled=false;scanBusy=false;
 }
