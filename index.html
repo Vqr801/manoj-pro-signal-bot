@@ -1,223 +1,23 @@
 <!doctype html>
 <html lang="hi">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ProX Signal</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101827">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<title>ProX Forex Signal Bot</title>
 <style>
-:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#101827;color:#edf2f7;font:16px system-ui,Arial}header{padding:22px 16px;background:#17243a;text-align:center;border-bottom:1px solid #30415b}h1{margin:0;font-size:23px;color:#68e0bd}header p{margin:7px 0 0;color:#bac7d8;font-size:13px}.wrap{max-width:850px;margin:auto;padding:16px}.card{background:#19263b;border:1px solid #30415b;border-radius:12px;padding:15px;margin:12px 0}label{display:block;margin-bottom:7px;color:#cbd5e1}input,button{font:inherit;border-radius:8px;padding:12px;border:1px solid #52647d}input{width:100%;background:#0e1726;color:white}button{background:#1aa783;color:#061b16;font-weight:700;border:0;margin-top:10px;width:100%}button:disabled{opacity:.5}.muted{font-size:13px;color:#aab8ca;line-height:1.5}.status{padding:10px;border-radius:8px;background:#0e1726;margin-top:10px}.row{display:flex;justify-content:space-between;gap:10px;align-items:center;border-bottom:1px solid #30415b;padding:12px 0}.row:last-child{border:0}.call{color:#57e0a4;font-weight:800}.put{color:#ff8585;font-weight:800}.wait{color:#f5ce70;font-weight:800}.small{font-size:12px;color:#aab8ca}.warning{color:#ffd28a}.top{display:flex;gap:10px;flex-wrap:wrap}.top button{flex:1;min-width:130px}
-/* Laptop/desktop layout: mobile styles above remain unchanged. */
-@media (min-width: 900px){
- body{font-size:16px;background:radial-gradient(ellipse at top,#1b2c45 0%,#101827 58%)}
- header{padding:30px 28px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:24px}
- header h1{font-size:30px;letter-spacing:.3px}
- header p{font-size:14px;margin:0;text-align:right}
- .wrap{max-width:1440px;width:calc(100% - 64px);padding:28px 0;display:grid;grid-template-columns:minmax(360px,.9fr) minmax(520px,1.35fr);gap:20px;align-items:start}
- .card{margin:0;padding:22px;border-radius:16px;box-shadow:0 12px 32px rgba(0,0,0,.18)}
- .wrap>.card:nth-child(2){min-height:390px}
- .wrap>.card:nth-child(3){grid-column:1/-1}
- .wrap>.card:nth-child(3){line-height:1.8}
- input,button,.card select{font-size:15px}
- button{cursor:pointer;transition:filter .15s,transform .15s}
- button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
- .row{padding:16px 8px}
- .small{font-size:13px;line-height:1.65}
- #results .row>div:first-child{min-width:0;flex:1}
- #results .row>div:last-child{min-width:100px;text-align:right;font-size:16px}
- .status{padding:13px 15px}
-}
-@media (min-width: 1400px){.wrap{grid-template-columns:minmax(420px,.85fr) minmax(650px,1.4fr);gap:24px}.card{padding:26px}}
+html,body{margin:0;width:100%;height:100%;background:#101827;color:#edf2f7;font-family:system-ui,Arial}
+iframe{display:block;width:100%;height:100%;height:100dvh;border:0;background:#101827}
 </style>
 </head>
 <body>
-<header><h1>ProX SIGNAL</h1><p>5 मिनट High Confidence Forex Signal • भारतीय समय (IST) • CALL / PUT / NO TRADE</p></header>
-<main class="wrap">
-<div class="card">
-<label for="key">Twelve Data API Key</label>
-<input id="key" type="password" autocomplete="off" placeholder="अपनी API key यहाँ डालें">
-<div class="muted warning">सुरक्षा: API key इसी browser के local storage में सेव होगी, सार्वजनिक HTML में नहीं। यह browser में देखी जा सकती है और API provider को भेजी जाती है। साझा मोबाइल पर सेव न करें।</div>
-<label for="pair" style="margin-top:14px">टॉप 5 करेंसी चुनें</label><select id="pair" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="ALL">टॉप 5 करेंसी</option><option value="EUR/USD">EUR/USD</option><option value="GBP/USD">GBP/USD</option><option value="USD/JPY">USD/JPY</option><option value="AUD/USD">AUD/USD</option><option value="USD/CAD">USD/CAD</option></select>
-<label for="tf" style="margin-top:14px">सिग्नल का समय चुनें</label><select id="tf" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="1">1 मिनट</option><option value="2">2 मिनट</option><option value="3">3 मिनट</option><option value="5" selected>5 मिनट</option></select><div class="top"><button id="save">Key सेव करें</button><button id="scan">अभी Scan करें</button></div>
-<div id="status" class="status">पहले API key डालें।</div>
-</div>
-<div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">चुने हुए समय के अनुसार जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
-<div class="card">
-<h3 style="margin:0 0 10px;color:#68e0bd">Signal History & Performance</h3>
-<div id="performance" class="status">अभी कोई रिकॉर्ड नहीं।</div>
-<div id="history"><p class="muted">सिग्नल आने पर हिस्ट्री यहाँ दिखेगी।</p></div>
-<button id="clearHistory" type="button" style="background:#713b48;color:#fff">हिस्ट्री साफ़ करें</button>
-<p class="small warning">एक्सपायरी के बाद Twelve Data के fresh quote से WIN/LOSS जाँचा जाएगा। ऐप खुला और इंटरनेट/API उपलब्ध रहना चाहिए। Quotex के भावों से अंतर हो सकता है; इसे वास्तविक ट्रेड परिणाम न मानें।</p>
-</div>
-<div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, MACD (12/26/9), ADX-जैसी trend strength के साथ अब Supertrend (ATR 10, factor 3), Bollinger Bands (20, 2) और Stochastic (14) की पुष्टि भी शामिल है। 80/100 से कम स्कोर, ADX 20 से कम, कमजोर ट्रेंड, विपरीत MACD या candle confirmation न मिलने पर NO TRADE। मजबूत EMA और MACD दिशा जरूरी रहेगी; breakout bonus है, अनिवार्य शर्त नहीं। सिग्नल के साथ पिछली candles पर अगले 1-मिनट candle की ऐतिहासिक दिशा-दर दिखाई जाती है (कम-से-कम 5 पुराने सिग्नल); यह चुने गए expiry की जीत दर नहीं है। यह भविष्य की जीत की संभावना नहीं है; नमूना छोटा हो सकता है और लाभ/accuracy की गारंटी नहीं। पहले demo पर जाँचें।</div>
-</main>
+<iframe src="./app.html" title="ProX Forex Signal Bot" allow="clipboard-read; clipboard-write"></iframe>
 <script>
-const pairs=['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD'];
-const $=id=>document.getElementById(id);let timer=null,scanBusy=false,lastAutoBoundary=0;
-// इस बॉट का डिफॉल्ट सिग्नल टाइम 5 मिनट रखें
-$('tf').value='5';
-try{$('key').value=localStorage.getItem('tdkey')||'';}catch(e){say('Browser storage बंद है। Site settings में storage/cookies allow करें।')}
-function say(t){$('status').textContent=t}
-$('save').onclick=()=>{const k=$('key').value.trim();if(!k){say('पहले API key डालें।');return}try{localStorage.setItem('tdkey',k);say('Key इस browser में सेव हो गई। अब पेज Refresh करने पर भी रहेगी।')}catch(e){say('Key सेव नहीं हुई। Browser की Site settings में storage/cookies allow करें और फिर कोशिश करें।')}};
-function ema(a,n){let k=2/(n+1),v=a[0];for(let i=1;i<a.length;i++)v=a[i]*k+v*(1-k);return v}
-function rsi(a){let g=0,l=0;for(let i=a.length-14;i<a.length;i++){let d=a[i]-a[i-1];if(d>0)g+=d;else l-=d}if(l===0)return 100;let rs=(g/14)/(l/14);return 100-100/(1+rs)}
-function strength(c){let tr=0,plus=0,minus=0;for(let i=c.length-14;i<c.length;i++){let x=c[i],p=c[i-1];let up=x.high-p.high,down=p.low-x.low;tr+=Math.max(x.high-x.low,Math.abs(x.high-p.close),Math.abs(x.low-p.close));if(up>down&&up>0)plus+=up;if(down>up&&down>0)minus+=down}if(!tr)return 0;return Math.abs(plus-minus)/tr*100}
-function macd(a){const line=[];for(let i=0;i<a.length;i++){const s=a.slice(0,i+1);line.push(ema(s,12)-ema(s,26));}const signal=ema(line.slice(-9),9);return {line:line[line.length-1],signal,previous:line[line.length-2]};}
-function atr(c,n=10){let tr=[];for(let i=1;i<c.length;i++){const x=c[i],p=c[i-1];tr.push(Math.max(x.high-x.low,Math.abs(x.high-p.close),Math.abs(x.low-p.close)));}return tr.slice(-n).reduce((a,b)=>a+b,0)/Math.min(n,tr.length)}
-function supertrend(c,n=10,mult=3){let a=atr(c,n),mid=(c[c.length-1].high+c[c.length-1].low)/2;return {line:mid-mult*a,atr:a,up:c[c.length-1].close>mid-mult*a};}
-function bollinger(a,n=20){const v=a.slice(-n),mean=v.reduce((x,y)=>x+y,0)/v.length,sd=Math.sqrt(v.reduce((x,y)=>x+(y-mean)**2,0)/v.length);return {upper:mean+2*sd,middle:mean,lower:mean-2*sd};}
-function stochastic(c,n=14){const v=c.slice(-n),hi=Math.max(...v.map(x=>x.high)),lo=Math.min(...v.map(x=>x.low)),cl=c[c.length-1].close;return hi===lo?50:(cl-lo)/(hi-lo)*100;}
-function historicalWinRate(c){
- let wins=0,total=0;
- for(let i=55;i<c.length-1;i++){
-  const h=c.slice(0,i+1),cl=h.map(x=>x.close),last=h[h.length-1],prev=h[h.length-2];
-  const e9=ema(cl.slice(-30),9),e21=ema(cl.slice(-50),21),rv=rsi(cl),adx=strength(h),m=macd(cl),bb=bollinger(cl),sk=stochastic(h),st=supertrend(h),a=st.atr;
-  const bull=last.close>last.open,bear=last.close<last.open,mb=m.line>m.signal&&m.line>0,ms=m.line<m.signal&&m.line<0,up=e9>e21&&last.close>e21,dn=e9<e21&&last.close<e21;
-  let call=0,put=0;
-  if(up)call+=15;if(dn)put+=15;
-  if(rv>=55&&rv<=68)call+=10;if(rv<=45&&rv>=32)put+=10;
-  if(adx>=20){if(up)call+=10;if(dn)put+=10;}
-  if(mb)call+=15;if(ms)put+=15;
-  if(bull)call+=5;if(bear)put+=5;
-  if(last.close>prev.high)call+=10;if(last.close<prev.low)put+=10;
-  if(st.up)call+=15;else put+=15;
-  if(last.close>bb.middle&&last.close<bb.upper)call+=10;
-  if(last.close<bb.middle&&last.close>bb.lower)put+=10;
-  if(sk>=55&&sk<=80)call+=10;if(sk<=45&&sk>=20)put+=10;
-  if(!(a>0&&(a/last.close*100)>0.001))continue;
-  let side='';
-  if(call>=80&&call>put+15&&mb&&up&&adx>=20&&bull)side='CALL';
-  else if(put>=80&&put>call+15&&ms&&dn&&adx>=20&&bear)side='PUT';
-  if(!side)continue;
-  total++;
-  const next=c[i+1].close;
-  if((side==='CALL'&&next>last.close)||(side==='PUT'&&next<last.close))wins++;
- }
- return {wins,total,rate:total?Math.round(wins/total*100):null};
+if('serviceWorker' in navigator && location.protocol==='https:'){
+ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
-
-const HISTORY_KEY='prox_signal_history_v1';
-function readHistory(){try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch(e){return []}}
-function writeHistory(items){try{localStorage.setItem(HISTORY_KEY,JSON.stringify(items.slice(0,200)))}catch(e){say('हिस्ट्री सेव नहीं हो सकी। Browser storage allow करें।')}}
-function recordSignal(x){
- const tf=Number($('tf').value),items=readHistory();
- const id=[x.pair,tf,x.time,x.side].join('|');
- if(items.some(z=>z.id===id))return;
- items.unshift({id,pair:x.pair,tf,side:x.side,entry:x.price,createdAt:Date.now(),expiresAt:Date.now()+tf*60000,result:x.side==='NO TRADE'?'NO TRADE':'PENDING',exit:null,source:'Twelve Data'});
- writeHistory(items);renderHistory();
-}
-async function checkExpiredSignals(){
- const key=(()=>{try{return localStorage.getItem('tdkey')||$('key').value.trim()}catch(e){return $('key').value.trim()}})();
- if(!key)return;
- const now=Date.now(),items=readHistory();
- const due=[...new Set(items.filter(s=>s.result==='PENDING'&&now>=s.expiresAt).map(s=>s.pair))];
- for(const pair of due){
-  try{
-   const url='https://api.twelvedata.com/price?symbol='+encodeURIComponent(pair)+'&apikey='+encodeURIComponent(key);
-   const response=await fetch(url),data=await response.json();
-   const price=Number(data.price);
-   if(!response.ok||!Number.isFinite(price)||price<=0)continue;
-   let changed=false;
-   for(const s of items){
-    if(s.pair!==pair||s.result!=='PENDING'||now<s.expiresAt)continue;
-    s.exit=price;s.checkedAt=Date.now();
-    if(price===s.entry)s.result='DRAW';
-    else if(s.side==='CALL')s.result=price>s.entry?'WIN':'LOSS';
-    else if(s.side==='PUT')s.result=price<s.entry?'WIN':'LOSS';
-    changed=true;
-   }
-   if(changed){writeHistory(items);renderHistory();}
-  }catch(e){/* keep pending when live quote cannot be verified */}
- }
-}
-function renderHistory(){
- const items=readHistory(),done=items.filter(x=>x.result==='WIN'||x.result==='LOSS'),wins=done.filter(x=>x.result==='WIN').length,losses=done.length-wins,rate=done.length?Math.round(wins/done.length*100):null;
- $('performance').innerHTML='<b>कुल रिकॉर्ड:</b> '+items.length+' / 200 &nbsp; <b>WIN:</b> '+wins+' &nbsp; <b>LOSS:</b> '+losses+' &nbsp; <b>Pending:</b> '+items.filter(x=>x.result==='PENDING').length+'<br><b>निर्णीत सिग्नल पर Win Rate:</b> '+(rate===null?'अभी उपलब्ध नहीं':rate+'%')+'<div class="small">DRAW और NO TRADE को Win Rate में नहीं गिना गया।</div>';
- $('history').innerHTML=items.length?items.slice(0,30).map(s=>'<div class="row"><div><b>'+s.pair+'</b> · '+s.tf+' मिनट · '+s.side+'<div class="small">Entry: '+s.entry+(s.exit===null?'':' · Exit: '+s.exit)+' · '+new Date(s.createdAt).toLocaleString('en-IN')+'</div></div><div class="'+(s.result==='WIN'?'call':s.result==='LOSS'?'put':'wait')+'">'+s.result+'</div></div>').join(''):'<p class="muted">अभी कोई रिकॉर्ड नहीं।</p>';
-}
-$('clearHistory').onclick=()=>{if(confirm('क्या आप पूरी Signal History साफ़ करना चाहते हैं?')){writeHistory([]);renderHistory();}};
-renderHistory();
-// Expired signals are checked against a fresh quote while the app remains open.
-setInterval(checkExpiredSignals,10000);
-checkExpiredSignals();
-async function one(pair,key){
- const minutes=Number($('tf').value);
- const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval=1min&outputsize=500&timezone=UTC&apikey='+encodeURIComponent(key);
- const res=await fetch(url);const j=await res.json();if(!j.values)throw Error(j.message||'डेटा उपलब्ध नहीं');
- const raw=j.values.map(v=>({time:v.datetime,open:+v.open,high:+v.high,low:+v.low,close:+v.close})).reverse();
- const step=minutes*60000,groups=new Map();
- for(const x of raw){const t=new Date(x.time.replace(' ','T')+'Z').getTime(),start=Math.floor(t/step)*step;if(start+step>Date.now())continue;const g=groups.get(start);if(!g)groups.set(start,{time:new Date(start).toISOString().slice(0,19).replace('T',' '),open:x.open,high:x.high,low:x.low,close:x.close});else{g.high=Math.max(g.high,x.high);g.low=Math.min(g.low,x.low);g.close=x.close;}}
- let c=[...groups.values()].sort((a,b)=>a.time.localeCompare(b.time));
- if(c.length<30)throw Error('पर्याप्त candles नहीं');
- const closes=c.map(x=>x.close),last=c[c.length-1],prev=c[c.length-2];
- const e9=ema(closes.slice(-30),9),e21=ema(closes.slice(-50),21),rv=rsi(closes),adx=strength(c),m=macd(closes);
- const bb=bollinger(closes),stoch=stochastic(c),st=supertrend(c),a=st.atr;
- const bullish=last.close>last.open,bearish=last.close<last.open;
- const macdBull=m.line>m.signal&&m.line>0,macdBear=m.line<m.signal&&m.line<0;
- const macdState=macdBull?'Bullish':macdBear?'Bearish':'Mixed';
- const up=e9>e21&&last.close>e21,down=e9<e21&&last.close<e21;
- const volOk=a>0&&(a/last.close*100)>0.001;
- let call=0,put=0;
- if(up)call+=15;if(down)put+=15;
- if(rv>=55&&rv<=68)call+=10;if(rv<=45&&rv>=32)put+=10;
- if(adx>=20){if(up)call+=10;if(down)put+=10;}
- if(macdBull)call+=15;if(macdBear)put+=15;
- if(bullish)call+=5;if(bearish)put+=5;
- if(last.close>prev.high)call+=10;if(last.close<prev.low)put+=10;
- if(st.up)call+=15;else put+=15;
- if(last.close>bb.middle&&last.close<bb.upper)call+=10;
- if(last.close<bb.middle&&last.close>bb.lower)put+=10;
- if(stoch>=55&&stoch<=80)call+=10;if(stoch<=45&&stoch>=20)put+=10;
- if(!volOk){call=0;put=0;}
- const score=Math.max(call,put);let side='NO TRADE';
- if(call>=80&&call>put+15&&macdBull&&up&&adx>=20&&bullish)side='CALL';
- else if(put>=80&&put>call+15&&macdBear&&down&&adx>=20&&bearish)side='PUT';
- const history=historicalWinRate(c);
- const candleCloseUtc=new Date(Date.parse(last.time.replace(' ','T')+'Z')+minutes*60000).toISOString().slice(0,19).replace('T',' ');
- const scanUtc=new Date().toISOString().slice(0,19).replace('T',' ');
- return {pair,side,score,rsi:rv,adx,time:candleCloseUtc,scanTime:scanUtc,price:last.close,macdState,stoch,supertrend:st.up?'Bullish':'Bearish',bbState:last.close>bb.upper?'Upper breakout':last.close<bb.lower?'Lower breakout':'Inside bands',history};
-}
-async function scan(){
- if(scanBusy)return;
- const key=(()=>{try{return localStorage.getItem('tdkey')||$('key').value.trim()}catch(e){return $('key').value.trim()}})();if(!key){say('API key डालें और Key सेव करें।');return}
- scanBusy=true;
- $('scan').disabled=true;$('auto').disabled=true;say('Market data जाँचा जा रहा है…');$('results').innerHTML='';
- let html='';
- const selected=$('pair').value;
- const scanPairs=selected==='ALL'?pairs:[selected];
- for(const p of scanPairs){
-  try{const x=await one(p,key);recordSignal(x);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • Stoch '+x.stoch.toFixed(0)+' • Supertrend '+x.supertrend+' • BB '+x.bbState+' • Score '+x.score+'/100 • ऐतिहासिक जीत दर: '+(x.history.total>=5?x.history.rate+'% ('+x.history.wins+'/'+x.history.total+')':'पर्याप्त डेटा नहीं')+' • '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.time.replace(' ','T')+'Z'))+' IST • Scan: '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.scanTime.replace(' ','T')+'Z'))+' IST</div></div><div class="'+cls+'">'+x.side+'</div></div>'}
-  catch(e){html+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,90)+'</div></div><div class="wait">डेटा नहीं</div></div>'}
-  $('results').innerHTML=html;
- }
- say('Scan पूरा हुआ ('+ $('tf').value +' मिनट)। अगला Auto Scan अगली पूरी कैंडल बंद होने के तुरंत बाद होगा।');$('scan').disabled=false;$('auto').disabled=false;scanBusy=false;
-}
-$('scan').onclick=scan;
-function startBoundaryAutoScan(){
- if(timer){clearInterval(timer);timer=null;}
- lastAutoBoundary=0;
- const check=()=>{
-  const step=Number($('tf').value)*60000;
-  const now=Date.now();
-  const boundary=Math.floor(now/step)*step;
-  if(now>=boundary+8000&&boundary>lastAutoBoundary&&!scanBusy){
-   lastAutoBoundary=boundary;
-   scan();
-  }
- };
- check();
- timer=setInterval(check,5000);
-}
-$('tf').addEventListener('change',()=>{
- if(timer){startBoundaryAutoScan();say('समय बदल गया। अब '+$('tf').value+' मिनट की हर पूरी कैंडल बंद होने के बाद स्कैन होगा।');}
-});
-$('auto').onclick=()=>{
- if(timer){clearInterval(timer);timer=null;$('auto').textContent='Auto Scan चालू करें';say('Auto Scan बंद है।');}
- else{
-  if(!$('key').value.trim()&&!(()=>{try{return localStorage.getItem('tdkey')}catch(e){return ''}})()){say('पहले API key डालें।');return}
-  try{localStorage.setItem('tdkey',$('key').value.trim()||localStorage.getItem('tdkey')||'')}catch(e){say('Browser storage की अनुमति दें।');return}
-  $('auto').textContent='Auto Scan बंद करें';
-  startBoundaryAutoScan();
-  say('Auto Scan चालू: हर कैंडल बंद होने के लगभग 8 सेकंड बाद स्कैन होगा।');
- }
-};
 </script>
-</body></html>
+</body>
+</html>
