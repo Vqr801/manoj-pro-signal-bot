@@ -36,7 +36,7 @@
 <input id="key" type="password" autocomplete="off" placeholder="अपनी API key यहाँ डालें">
 <div class="muted warning">सुरक्षा: API key इसी browser के local storage में सेव होगी, सार्वजनिक HTML में नहीं। यह browser में देखी जा सकती है और API provider को भेजी जाती है। साझा मोबाइल पर सेव न करें।</div>
 <label for="pair" style="margin-top:14px">टॉप 5 करेंसी चुनें</label><select id="pair" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="ALL">टॉप 5 करेंसी</option><option value="EUR/USD">EUR/USD</option><option value="GBP/USD">GBP/USD</option><option value="USD/JPY">USD/JPY</option><option value="AUD/USD">AUD/USD</option><option value="USD/CAD">USD/CAD</option></select>
-<label for="tf" style="margin-top:14px">सिग्नल का समय चुनें</label><select id="tf" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="1">1 मिनट</option><option value="2">2 मिनट</option><option value="3">3 मिनट</option><option value="5" selected>5 मिनट</option></select><div class="top"><button id="save" type="button" onclick="saveKey()">Key सेव करें</button><button id="scan">अभी Scan करें</button></div>
+<label for="tf" style="margin-top:14px">सिग्नल का समय चुनें</label><select id="tf" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="1">1 मिनट</option><option value="2">2 मिनट</option><option value="3">3 मिनट</option><option value="5" selected>5 मिनट</option></select><div class="top"><button id="save" type="button">Key सेव करें</button><button id="scan">अभी Scan करें</button></div>
 <div id="status" class="status">पहले API key डालें।</div>
 </div>
 <div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">चुने हुए समय के अनुसार जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
@@ -64,7 +64,8 @@ let timer=null,scanBusy=false,lastAutoBoundary=0;
 $('tf').value='5';
 try{$('key').value=localStorage.getItem('tdkey')||'';}catch(e){say('Browser storage बंद है। Site settings में storage/cookies allow करें।')}
 function say(t){$('status').textContent=t}
-window.saveKey=function(){const k=$('key').value.trim();if(!k){say('पहले API key डालें।');$('key').focus();return}try{localStorage.setItem('tdkey',k);const saved=localStorage.getItem('tdkey');if(saved===k){say('Key सेव हो गई। अब पेज Refresh करके जाँचें।')}else{say('Key सेव नहीं हुई। Chrome में इस साइट की storage अनुमति चालू करें।')}}catch(e){say('Key सेव नहीं हुई। Chrome में इस साइट की storage/cookies अनुमति चालू करें।')}};
+function saveKey(){const k=$('key').value.trim();if(!k){say('पहले API key डालें।');$('key').focus();return}try{localStorage.setItem('tdkey',k);const saved=localStorage.getItem('tdkey');if(saved===k){say('Key सेव हो गई। अब पेज Refresh करके जाँचें।')}else{say('Key सेव नहीं हुई। Chrome में इस साइट की storage अनुमति चालू करें।')}}catch(e){say('Key सेव नहीं हुई। Chrome में इस साइट की storage/cookies अनुमति चालू करें।')}}
+$('save').addEventListener('click',saveKey);
 function ema(a,n){let k=2/(n+1),v=a[0];for(let i=1;i<a.length;i++)v=a[i]*k+v*(1-k);return v}
 function rsi(a){let g=0,l=0;for(let i=a.length-14;i<a.length;i++){let d=a[i]-a[i-1];if(d>0)g+=d;else l-=d}if(l===0)return 100;let rs=(g/14)/(l/14);return 100-100/(1+rs)}
 function strength(c){let tr=0,plus=0,minus=0;for(let i=c.length-14;i<c.length;i++){let x=c[i],p=c[i-1];let up=x.high-p.high,down=p.low-x.low;tr+=Math.max(x.high-x.low,Math.abs(x.high-p.close),Math.abs(x.low-p.close));if(up>down&&up>0)plus+=up;if(down>up&&down>0)minus+=down}if(!tr)return 0;return Math.abs(plus-minus)/tr*100}
