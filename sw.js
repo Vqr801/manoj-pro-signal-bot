@@ -1,4 +1,4 @@
-const CACHE='prox-forex-pwa-v1';
+const CACHE='prox-forex-pwa-v2';
 const ASSETS=['./','./index.html','./app.html','./manifest.webmanifest','./icon.svg'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))));
