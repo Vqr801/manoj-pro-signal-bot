@@ -4,20 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#101827">
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./icon.svg" type="image/svg+xml">
 <title>ProX Forex Signal Bot</title>
-<style>
-html,body{margin:0;width:100%;height:100%;background:#101827;color:#edf2f7;font-family:system-ui,Arial}
-iframe{display:block;width:100%;height:100%;height:100dvh;border:0;background:#101827}
-</style>
+<style>body{margin:0;background:#101827;color:#edf2f7;font:16px system-ui;display:grid;place-items:center;min-height:100vh}</style>
 </head>
 <body>
-<iframe src="./app.html?v=7" title="ProX Forex Signal Bot" allow="clipboard-read; clipboard-write"></iframe>
+<p>ProX Bot खुल रहा है…</p>
 <script>
-if('serviceWorker' in navigator && location.protocol==='https:'){
- window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-}
+(async()=>{
+ try{
+  if('serviceWorker' in navigator){
+   const registrations=await navigator.serviceWorker.getRegistrations();
+   await Promise.all(registrations.map(registration=>registration.unregister()));
+  }
+  if('caches' in window){
+   const keys=await caches.keys();
+   await Promise.all(keys.map(key=>caches.delete(key)));
+  }
+ }catch(e){}
+ location.replace('./app.html?v=8');
+})();
 </script>
 </body>
 </html>
