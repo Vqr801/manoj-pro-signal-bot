@@ -134,7 +134,8 @@ async function one(pair,key){
  const macdState=macdBull?'Bullish':macdBear?'Bearish':'Mixed';
  const up=e9>e21&&last.close>e21,down=e9<e21&&last.close<e21;
  const volOk=a>0&&(a/last.close*100)>0.001;
- let call=0,put=0;
+ const candleRead=candlePsychology(c);
+ let call=candleRead.call,put=candleRead.put;
  if(up)call+=15;if(down)put+=15;
  if(rv>=55&&rv<=68)call+=10;if(rv<=45&&rv>=32)put+=10;
  if(adx>=20){if(up)call+=10;if(down)put+=10;}
