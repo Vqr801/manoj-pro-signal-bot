@@ -105,18 +105,39 @@ function historicalWinRate(c){
 }
 
 function candlePsychology(c){
- const x=c[c.length-1],p=c[c.length-2],o=x.open,h=x.high,l=x.low,cl=x.close,range=Math.max(h-l,1e-12),body=Math.abs(cl-o),upper=h-Math.max(o,cl),lower=Math.min(o,cl)-l,bodyPct=body/range,upPct=upper/range,lowPct=lower/range;
- const po=p.open,pc=p.close,pBody=Math.abs(pc-po);
- let pattern='सामान्य कैंडल',call=0,put=0,psych='खरीदार और विक्रेता लगभग संतुलित';
- const bull=cl>o,bear=cl<o;
- if(bodyPct<=0.10){pattern='Doji';psych='खरीदार-विक्रेता में अनिर्णय';}
- if(lowPct>=0.55&&bodyPct<=0.35&&upPct<=0.20){pattern='Hammer / नीचे की अस्वीकृति';call+=14;psych='नीचे भाव गिरा, पर खरीदारों ने वापस ऊपर खींचा';}
- if(upPct>=0.55&&bodyPct<=0.35&&lowPct<=0.20){pattern='Shooting Star / ऊपर की अस्वीकृति';put+=14;psych='ऊपर भाव गया, पर विक्रेताओं ने नीचे धकेला';}
- if(bull&&pc<po&&o<=pc&&cl>=po&&body>pBody*0.8){pattern='Bullish Engulfing';call+=16;psych='खरीदारों ने पिछली लाल कैंडल पर दबाव बनाया';}
- else if(bear&&pc>po&&o>=pc&&cl<=po&&body>pBody*0.8){pattern='Bearish Engulfing';put+=16;psych='विक्रेताओं ने पिछली हरी कैंडल पर दबाव बनाया';}
- if(bull&&bodyPct>=0.75&&upPct<0.12&&lowPct<0.12){pattern='Bullish Marubozu';call+=10;psych='कैंडल में खरीदारों का मजबूत नियंत्रण';}
- if(bear&&bodyPct>=0.75&&upPct<0.12&&lowPct<0.12){pattern='Bearish Marubozu';put+=10;psych='कैंडल में विक्रेताओं का मजबूत नियंत्रण';}
- if(h<=p.high&&l>=p.low&&pattern==='सामान्य कैंडल'){pattern='Inside Bar';psych='बाजार में ठहराव; ब्रेकआउट की पुष्टि जरूरी';}
+ // Analyze only the most recent fully closed, aggregated candle.
+ const x=c[c.length-1],p=c[c.length-2];
+ const o=x.open,h=x.high,l=x.low,cl=x.close;
+ const range=h-l,body=Math.abs(cl-o),upper=h-Math.max(o,cl),lower=Math.min(o,cl)-l;
+ if(!(range>0))return {pattern:'अमान्य OHLC',psych:'कैंडल का High/Low डेटा सही नहीं',call:0,put:0,bodyPct:0,upperWick:0,lowerWick:0};
+ const bodyPct=body/range,upPct=upper/range,lowPct=lower/range;
+ const bull=cl>o,bear=cl<o,prevBull=p.close>p.open,prevBear=p.close<p.open;
+ const closes=c.map(v=>v.close),trendUp=ema(closes.slice(-30),9)>ema(closes.slice(-50),21);
+ const trendDown=ema(closes.slice(-30),9)<ema(closes.slice(-50),21);
+ let pattern='कोई स्पष्ट मानक पैटर्न नहीं',psych='इस कैंडल से अकेले बाजार की मनोवृत्ति निश्चित नहीं; अगले संकेत की पुष्टि जरूरी';
+ let call=0,put=0;
+ // Strict body engulfing: current body fully covers previous body.
+ const bullEngulf=bull&&prevBear&&o<=p.close&&cl>=p.open&&body>Math.abs(p.close-p.open);
+ const bearEngulf=bear&&prevBull&&o>=p.close&&cl<=p.open&&body>Math.abs(p.close-p.open);
+ if(bullEngulf){pattern='Bullish Engulfing (body-confirmed)';psych='हरी कैंडल का वास्तविक बॉडी पिछली लाल बॉडी को पूरी तरह ढकता है';call=12;}
+ else if(bearEngulf){pattern='Bearish Engulfing (body-confirmed)';psych='लाल कैंडल का वास्तविक बॉडी पिछली हरी बॉडी को पूरी तरह ढकता है';put=12;}
+ else if(bodyPct<=0.10){pattern='Doji';psych='छोटी बॉडी: खरीदार-विक्रेता में अनिर्णय; दिशा का संकेत नहीं';}
+ else if(lowPct>=0.60&&bodyPct<=0.30&&upPct<=0.15){
+  if(trendDown){pattern='Hammer shape (downtrend context)';psych='नीचे लंबी wick और नीचे का trend: संभावित rejection, पुष्टि बाकी';call=8;}
+  else if(trendUp){pattern='Hanging Man shape (uptrend context)';psych='ऊपर के trend में लंबी नीचे की wick: संभावित चेतावनी, पुष्टि बाकी';}
+  else {pattern='Long Lower Wick';psych='नीचे की कीमतें अस्वीकार हुईं; trend संदर्भ नहीं मिला';}
+ }
+ else if(upPct>=0.60&&bodyPct<=0.30&&lowPct<=0.15){
+  if(trendUp){pattern='Shooting Star shape (uptrend context)';psych='ऊपर लंबी wick और ऊपर का trend: संभावित rejection, पुष्टि बाकी';put=8;}
+  else if(trendDown){pattern='Inverted Hammer shape (downtrend context)';psych='नीचे के trend में ऊपर की wick: संभावित reversal, पुष्टि बाकी';}
+  else {pattern='Long Upper Wick';psych='ऊँची कीमतें अस्वीकार हुईं; trend संदर्भ नहीं मिला';}
+ }
+ else if(bodyPct>=0.85&&upPct<=0.08&&lowPct<=0.08){
+  pattern=bull?'Bullish Marubozu-like (strong body)':'Bearish Marubozu-like (strong body)';
+  psych=bull?'बंद भाव open के ऊपर और wick छोटी: इस candle में खरीदार मजबूत':'बंद भाव open के नीचे और wick छोटी: इस candle में विक्रेता मजबूत';
+  if(bull)call=7;else if(bear)put=7;
+ }
+ else if(h<p.high&&l>p.low){pattern='Inside Bar (strict)';psych='पूरी कैंडल पिछली कैंडल के range के भीतर; breakout अभी confirm नहीं';}
  return {pattern,psych,call,put,bodyPct:Math.round(bodyPct*100),upperWick:Math.round(upPct*100),lowerWick:Math.round(lowPct*100)};
 }
 async function one(pair,key){
