@@ -1,8 +1,9 @@
 {
-  "name": "Forex Signal Bot Pro - New",
-  "short_name": "Forex Signal Pro",
-  "description": "Separate currency signal scanner for breakout retest reversal",
-  "start_url": "./index.html",
+  "id": "./?app=forex-signal-bot-pro-2026",
+  "name": "Forex Signal Bot Pro - Separate App",
+  "short_name": "Forex Pro New",
+  "description": "नया अलग Forex Signal Bot Pro ऐप; ProX Signal से अलग पहचान",
+  "start_url": "./index.html?app=forex-signal-bot-pro-2026",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
