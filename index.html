@@ -1,25 +1,58 @@
 <!doctype html>
-<html lang="hi">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#101827">
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./icon.svg" type="image/svg+xml">
-<title>ProX Forex Signal Bot</title>
-</head>
-<body style="margin:0;background:#101827;color:#edf2f7;font:16px system-ui;display:grid;place-items:center;min-height:100vh">
-<p>ProX Bot खुल रहा है…</p>
-<script>
-(async()=>{
- try{
-  if('serviceWorker' in navigator){
-   const registration=await navigator.serviceWorker.register('./sw.js');
-   await navigator.serviceWorker.ready;
-  }
- }catch(e){}
- location.replace('./app.html?v=9');
-})();
-</script>
-</body>
-</html>
+<html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1220"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/icon-192.png"><title>FX Signal Scanner</title>
+<style>
+:root{color-scheme:dark;--bg:#08101d;--panel:#111d2e;--line:#26364d;--text:#edf4ff;--muted:#9fb0c8;--green:#21d19f;--red:#ff6578;--gold:#f6c75b;--blue:#74a9ff}*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#08101d,#0c1727 65%,#08101d);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}main{max-width:850px;margin:auto;padding:16px 13px 36px}.head{display:flex;align-items:center;gap:12px;margin-bottom:16px}.logo{width:44px;height:44px;border-radius:13px;background:#18365b;display:grid;place-items:center;font-size:22px}.head h1{font-size:20px;margin:0}.head p{margin:3px 0 0;color:var(--muted);font-size:12px}.panel{background:rgba(17,29,46,.96);border:1px solid var(--line);border-radius:17px;padding:15px;margin:12px 0}.title{font-weight:750;margin:0 0 12px;font-size:15px}.row{display:flex;gap:9px;flex-wrap:wrap}.field{flex:1;min-width:130px}.field label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}input,select{width:100%;padding:12px;border-radius:10px;border:1px solid #34445c;background:#0a1423;color:var(--text);font-size:14px;outline:none}button{border:0;border-radius:11px;padding:13px 15px;font-weight:750;font-size:14px;cursor:pointer;background:var(--green);color:#062116;min-height:45px}button.secondary{background:#22354e;color:#e7f0ff;border:1px solid #3a4d68}button:disabled{opacity:.55}.actions{display:flex;gap:9px;margin-top:12px}.actions button{flex:1}.note{font-size:12px;line-height:1.55;color:var(--muted);margin:10px 0 0}.status{padding:10px 12px;background:#0a1423;border:1px solid var(--line);border-radius:10px;color:var(--muted);font-size:12px;margin-top:10px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.card{background:#0a1423;border:1px solid var(--line);border-radius:13px;padding:12px;min-width:0}.pair{font-weight:800;font-size:15px}.meta{font-size:11px;color:var(--muted);margin-top:3px}.signal{margin-top:9px;font-size:19px;font-weight:850}.call{color:var(--green)}.put{color:var(--red)}.wait{color:var(--gold)}.tag{display:inline-block;padding:4px 7px;border-radius:7px;font-size:10px;background:#1a2b41;color:#b8d4ff;margin:5px 4px 0 0}.details{font-size:12px;line-height:1.5;color:#c5d1e2;margin-top:8px}.empty{color:var(--muted);font-size:13px;line-height:1.6}.footer{font-size:11px;color:#8293ac;text-align:center;margin:18px 0}.hidden{display:none}.pair-choice{display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#0a1423;font-size:13px}.pair-choice input{width:17px;height:17px;padding:0;margin:0}#selectAllPairs{width:18px;height:18px;padding:0;margin:0}#autoToggle{width:100%;white-space:normal}@media(max-width:440px){.grid{grid-template-columns:1fr}.head h1{font-size:18px}.panel{padding:13px}}
+</style></head><body><main>
+<header class="head"><div class="logo">📊</div><div><h1>FX Breakout • Retest • Reversal</h1><p>Forex Signal Scanner · Mobile Edition</p></div></header>
+<section class="panel"><h2 class="title">डेटा और स्कैन सेटिंग</h2><div class="field"><label>Twelve Data API Key (लाइव कैंडल डेटा के लिए)</label><input id="apiKey" type="password" placeholder="अपनी API key यहाँ डालें" autocomplete="off"></div><div class="row" style="margin-top:10px"><div class="field"><label>Expiry / सिग्नल अवधि</label><select id="expiry"><option value="1">1 मिनट</option><option value="2">2 मिनट</option><option value="3" selected>3 मिनट</option><option value="4">4 मिनट</option><option value="5">5 मिनट</option></select></div><div class="field"><label>कैंडल टाइमफ्रेम</label><select id="tf"><option value="1min">1 मिनट</option><option value="5min">5 मिनट</option></select></div></div><div class="actions"><button id="scan">🔎 अभी स्कैन करें</button><button class="secondary" id="save">Key सेव</button></div><div id="status" class="status">API key डालें और स्कैन करें। Key केवल इसी ब्राउज़र में सेव होगी।</div><p class="note">डेटा Twelve Data से आएगा। API की उपलब्धता/लिमिट आपके प्लान पर निर्भर है। कोई API key नहीं है तो लाइव सिग्नल नहीं बनेंगे।</p></section>
+<section class="panel"><h2 class="title">करेंसी पेयर चुनें</h2>
+<div class="row" style="align-items:center;margin-bottom:10px">
+<label style="display:flex;align-items:center;gap:8px;color:var(--text);font-size:13px"><input id="selectAllPairs" type="checkbox" checked style="width:18px;height:18px"> सभी 5 करेंसी पेयर</label>
+</div>
+<div id="pairChoices" class="row">
+<label class="pair-choice"><input type="checkbox" value="EUR/USD" checked> EUR/USD</label>
+<label class="pair-choice"><input type="checkbox" value="USD/JPY" checked> USD/JPY</label>
+<label class="pair-choice"><input type="checkbox" value="GBP/USD" checked> GBP/USD</label>
+<label class="pair-choice"><input type="checkbox" value="USD/CAD" checked> USD/CAD</label>
+<label class="pair-choice"><input type="checkbox" value="AUD/USD" checked> AUD/USD</label>
+</div>
+<p class="note">सभी चुनने पर एक साथ सभी पेयर स्कैन होंगे। केवल चुने हुए पेयर ही परिणाम में दिखेंगे।</p>
+</section>
+<section class="panel"><h2 class="title">ऑटो स्कैन</h2>
+<div class="row" style="align-items:end">
+<div class="field"><label>स्कैन अंतराल</label><select id="autoInterval"><option value="1">हर 1 मिनट</option><option value="2">हर 2 मिनट</option><option value="3">हर 3 मिनट</option><option value="4">हर 4 मिनट</option><option value="5" selected>हर 5 मिनट</option></select></div>
+<div class="field"><label>ऑटो स्कैन चालू / बंद</label><button id="autoToggle" class="secondary" type="button">▶ ऑटो स्कैन चालू करें</button></div>
+</div>
+<div id="autoStatus" class="status">ऑटो स्कैन बंद है। चालू करने पर पहले तुरंत स्कैन होगा, फिर चुने गए अंतराल पर।</div>
+</section>
+<section class="panel"><h2 class="title">सिग्नल फ़िल्टर</h2><div class="row"><div class="field"><label>कम-से-कम सेटअप स्कोर</label><select id="threshold"><option value="65">65% · अधिक सिग्नल</option><option value="72" selected>72% · संतुलित</option><option value="80">80% · कड़े फ़िल्टर</option></select></div><div class="field"><label>मार्केट फ़िल्टर</label><select id="market"><option value="normal" selected>सामान्य / कम शोर</option><option value="all">सभी स्थितियाँ</option></select></div></div><p class="note">सिर्फ Breakout, Retest और Reversal सेटअप। रेंज/कमज़ोर कैंडल/कम स्कोर पर WAIT।</p></section>
+<section class="panel"><h2 class="title">टॉप 5 Forex पेयर · लाइव स्कैन</h2><div id="results" class="grid"><div class="empty">अभी कोई स्कैन नहीं हुआ।</div></div></section>
+<section class="panel"><h2 class="title">सिग्नल कैसे तय होगा?</h2><div class="details">• Breakout: पिछली कैंडल के हाई/लो से स्पष्ट क्लोज़ और बॉडी पुष्टि।<br>• Retest: टूटे स्तर पर वापस आकर rejection candle।<br>• Reversal: swing zone पर engulfing/pin-bar + RSI/EMA संदर्भ।<br>• कमजोर ATR, अस्पष्ट दिशा या कम स्कोर = WAIT।</div><p class="note">यह अनुमानित तकनीकी स्कोर है, प्रमाणित जीत प्रतिशत नहीं। Binary विकल्पों में तेज़ नुकसान संभव है। पहले डेमो पर परीक्षण करें; कोई ऑटो-ट्रेड/ब्रोकर लॉगिन नहीं।</p></section>
+<div class="footer">FX Signal Scanner · Indian Standard Time (IST) · Manual decision only</div>
+</main><script>
+const pairs=['EUR/USD','USD/JPY','GBP/USD','USD/CAD','AUD/USD'];
+const $=id=>document.getElementById(id);let busy=false;
+try{$('apiKey').value=localStorage.getItem('fx_td_key')||''}catch(e){}
+$('save').addEventListener('click',()=>{try{localStorage.setItem('fx_td_key',$('apiKey').value.trim());$('status').textContent='Key इस ब्राउज़र में सेव कर दी गई। इसे किसी के साथ साझा न करें.'}catch(e){$('status').textContent='इस ब्राउज़र में सेव नहीं हो सका; स्कैन से पहले key डालें।'}});
+$('scan').addEventListener('click',scanAll);
+function num(x){return Number(x)}function avg(a){return a.reduce((s,x)=>s+x,0)/Math.max(1,a.length)}
+function ema(arr,n){let k=2/(n+1),v=arr[0];for(let i=1;i<arr.length;i++)v=arr[i]*k+v*(1-k);return v}
+function rsi(c,n=14){let g=0,l=0;for(let i=c.length-n;i<c.length;i++){let d=c[i]-c[i-1];if(d>0)g+=d;else l-=d}return l===0?100:100-100/(1+(g/n)/(l/n))}
+function candle(b){let range=b.high-b.low;return {body:Math.abs(b.close-b.open),range,up:b.close>b.open,down:b.close<b.open,upper:b.high-Math.max(b.open,b.close),lower:Math.min(b.open,b.close)-b.low}}
+function analyze(bars,expiry){let c=bars.map(x=>x.close),last=bars.at(-1),prev=bars.at(-2),p=candle(last),q=candle(prev),recent=bars.slice(-21,-1),hi=Math.max(...recent.map(x=>x.high)),lo=Math.min(...recent.map(x=>x.low)),atr=avg(bars.slice(-15).map(x=>x.high-x.low)),e9=ema(c.slice(-35),9),e21=ema(c.slice(-35),21),rr=rsi(c),bodyRatio=p.range?p.body/p.range:0;
+ let setup='WAIT',dir=0,score=48,why='सेटअप स्पष्ट नहीं';
+ const upBreak=last.close>hi&&p.up&&bodyRatio>.55,downBreak=last.close<lo&&p.down&&bodyRatio>.55;
+ const upRetest=prev.close>hi&&last.low<=hi+atr*.18&&last.close>hi&&p.up&&p.lower>p.body*.35;
+ const downRetest=prev.close<lo&&last.high>=lo-atr*.18&&last.close<lo&&p.down&&p.upper>p.body*.35;
+ const bullishRev=(last.close>last.open&&p.lower>p.body*1.7&&last.low<=lo+atr*.25)||(last.close>last.open&&prev.close<prev.open&&last.close>prev.open&&last.open<prev.close);
+ const bearishRev=(last.close<last.open&&p.upper>p.body*1.7&&last.high>=hi-atr*.25)||(last.close<last.open&&prev.close>prev.open&&last.close<prev.open&&last.open>prev.close);
+ if(upRetest){setup='RETEST';dir=1;score=75;why='टूटे resistance का bullish retest'}else if(downRetest){setup='RETEST';dir=-1;score=75;why='टूटे support का bearish retest'}else if(upBreak){setup='BREAKOUT';dir=1;score=70;why='range high के ऊपर candle close'}else if(downBreak){setup='BREAKOUT';dir=-1;score=70;why='range low के नीचे candle close'}else if(bullishRev){setup='REVERSAL';dir=1;score=69;why='bullish rejection / engulfing'}else if(bearishRev){setup='REVERSAL';dir=-1;score=69;why='bearish rejection / engulfing'}
+ if(dir){if((dir>0&&e9>e21)||(dir<0&&e9<e21))score+=8;else score-=6;if((dir>0&&rr>50&&rr<72)||(dir<0&&rr<50&&rr>28))score+=5;if(bodyRatio>.65)score+=4;if(atr>0&&p.range<atr*.35)score-=14;if(atr>0&&p.range>atr*2.5)score-=8;if((dir>0&&rr>78)||(dir<0&&rr<22))score-=10;score=Math.max(50,Math.min(88,score));}
+ const threshold=Number($('threshold').value);if(dir&&score<threshold){setup='WAIT';dir=0;why='सेटअप मिला, लेकिन फ़िल्टर स्कोर कम';}if($('market').value==='normal'&&atr>0&&p.range<atr*.25){setup='WAIT';dir=0;why='कम volatility / कमजोर candle';}
+ return {setup,dir,score,why,close:last.close,openTime:last.datetime,closeTime:'',expiry,hi,lo,rr};}
+async function fetchPair(pair){let key=$('apiKey').value.trim(),interval=$('tf').value;if(!key)throw Error('पहले Twelve Data API key डालें।');let url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval='+interval+'&outputsize=60&timezone=Asia/Kolkata&apikey='+encodeURIComponent(key);let r=await fetch(url);if(!r.ok)throw Error('डेटा सर्वर HTTP '+r.status);let j=await r.json();if(j.status==='error'||!j.values)throw Error(j.message||'डेटा नहीं मिला');return j.values.slice().reverse().map(v=>({datetime:v.datetime,open:num(v.open),high:num(v.high),low:num(v.low),close:num(v.close)})).filter(x=>Object.values(x).every(v=>Number.isFinite(v)||typeof v==='string'));}
+function ist(t){if(!t)return '—';let d=new Date(t.replace(' ','T')+'+05:30');return isNaN(d)?t:d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true,timeZone:'Asia/Kolkata'})+' IST'}function istDate(d){return d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true,timeZone:'Asia/Kolkata'})+' IST'}
+async function scanAll(){if(busy)return;busy=true;$('scan').disabled=true;$('status').textContent='लाइव कैंडल डेटा लोड हो रहा है…';$('results').innerHTML='';let exp=Number($('expiry').value),ok=0,chosen=selectedPairs();if(!chosen.length){$('status').textContent='कम-से-कम एक करेंसी पेयर चुनें।';busy=false;$('scan').disabled=false;return;}for(const pair of chosen){let card=document.createElement('article');card.className='card';card.innerHTML='<div class="pair">'+pair+'</div><div class="meta">डेटा जाँचा जा रहा है…</div>'; $('results').appendChild(card);try{let bars=await fetchPair(pair);if(bars.length<30)throw Error('कैंडल कम हैं');let a=analyze(bars,exp);ok++;let cls=a.dir>0?'call':a.dir<0?'put':'wait',txt=a.dir>0?'CALL / GREEN':a.dir<0?'PUT / RED':'WAIT';let start=new Date(a.openTime.replace(' ','T')+'+05:30'),end=new Date(start.getTime()+Number($('tf').value.replace('min',''))*60000);card.innerHTML='<div class="pair">'+pair+'</div><div class="meta">'+$('tf').value+' कैंडल · Expiry '+exp+' मिनट</div><div class="signal '+cls+'">'+txt+'</div><span class="tag">'+a.setup+'</span><span class="tag">स्कोर '+(a.dir?a.score+'%':'—')+'</span><div class="details">'+a.why+'<br>अनुमानित सेटअप स्कोर: '+(a.dir?a.score+'%':'लागू नहीं')+'<br>कैंडल Open: '+ist(a.openTime)+'<br>कैंडल Close: '+istDate(end)+'<br>RSI: '+a.rr.toFixed(1)+' · स्तर H/L: '+a.hi.toFixed(5)+' / '+a.lo.toFixed(5)+'</div>';}catch(e){card.innerHTML='<div class="pair">'+pair+'</div><div class="signal wait">DATA ERROR</div><div class="details">'+String(e.message||e)+'</div>';}}
+$('status').textContent=ok+' / '+chosen.length+' चुने हुए पेयर स्कैन हुए। यह तकनीकी फ़िल्टर है, जीत की गारंटी नहीं।';busy=false;$('scan').disabled=false;}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+</script></body></html>
