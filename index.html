@@ -33,12 +33,12 @@
 <header><h1>ProX SIGNAL</h1><p>5 मिनट High Confidence Forex Signal • भारतीय समय (IST) • CALL / PUT / NO TRADE</p></header>
 <main class="wrap">
 <div class="card">
-<label for="key">Twelve Data API Key</label>
+<label for="key">Twelve Data API Key (खाली छोड़ें तो मुफ्त BiQuote)</label>
 <input id="key" type="password" autocomplete="off" placeholder="अपनी API key यहाँ डालें">
 <div class="muted warning">सुरक्षा: API key इसी browser के local storage में सेव होगी, सार्वजनिक HTML में नहीं। यह browser में देखी जा सकती है और API provider को भेजी जाती है। साझा मोबाइल पर सेव न करें।</div>
 <label for="pair" style="margin-top:14px">टॉप 5 करेंसी चुनें</label><select id="pair" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="ALL">टॉप 5 करेंसी</option><option value="EUR/USD">EUR/USD</option><option value="GBP/USD">GBP/USD</option><option value="USD/JPY">USD/JPY</option><option value="AUD/USD">AUD/USD</option><option value="USD/CAD">USD/CAD</option></select>
-<label for="tf" style="margin-top:14px">सिग्नल का समय चुनें</label><select id="tf" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="1">1 मिनट</option><option value="2">2 मिनट</option><option value="3">3 मिनट</option><option value="5" selected>5 मिनट</option></select><div class="top"><button id="save" type="button">Key सेव करें</button><button id="scan">अभी Scan करें</button></div>
-<div id="status" class="status">पहले API key डालें।</div>
+<label for="tf" style="margin-top:14px">सिग्नल का समय चुनें</label><select id="tf" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="1">1 मिनट</option><option value="2">2 मिनट</option><option value="3">3 मिनट</option><option value="5" selected>5 मिनट</option></select><div class="top"><button id="save" type="button">Key सेव / हटाएँ</button><button id="scan">अभी Scan करें</button></div>
+<div id="providerStatus" class="status">Key डालें = Twelve Data · Key खाली = मुफ्त BiQuote</div><div id="status" class="status">डेटा स्रोत चुनें और Scan करें।</div>
 </div>
 <div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">चुने हुए समय के अनुसार जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
 <div class="card">
@@ -49,8 +49,14 @@
 </div>
 <div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, MACD (12/26/9), ADX-जैसी trend strength के साथ अब Supertrend (ATR 10, factor 3), Bollinger Bands (20, 2) और Stochastic (14) की पुष्टि भी शामिल है। 80/100 से कम स्कोर, ADX 20 से कम, कमजोर ट्रेंड, विपरीत MACD या candle confirmation न मिलने पर NO TRADE। मजबूत EMA और MACD दिशा जरूरी रहेगी; breakout bonus है, अनिवार्य शर्त नहीं। अगली कैंडल के GREEN/RED प्रतिशत मौजूदा तकनीकी संकेतकों के स्कोर पर आधारित अनुमान हैं। यह भविष्यवाणी की गारंटी या वास्तविक ट्रेड जीत दर नहीं है। पहले demo पर जाँचें।</div>
 </main>
-<script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script><script>
 const pairs=['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD'];
+const biqSymbols={'EUR/USD':'EURUSD','USD/JPY':'USDJPY','GBP/USD':'GBPUSD','USD/CAD':'USDCAD','AUD/USD':'AUDUSD'};
+let proxHub=null,proxTicks={},proxActive={},proxClosed={},proxConnected=false;
+function updateProvider(){let key='';try{key=localStorage.getItem('tdkey')||''}catch(e){}$('providerStatus').textContent=key?'डेटा स्रोत: Twelve Data (API Key सेव है)':'डेटा स्रोत: मुफ्त BiQuote (API Key नहीं)';}
+function proxCandleStart(ms,mins){return Math.floor(ms/(mins*60000))*mins*60000}
+function startProxBiQuote(){if(proxHub||!window.signalR)return;try{proxHub=new signalR.HubConnectionBuilder().withUrl('https://biquote.io/hubs/tick').withAutomaticReconnect().build();proxHub.on('ReceiveTick',tick=>{let pair=Object.keys(biqSymbols).find(p=>biqSymbols[p]===tick.symbol);if(!pair)return;let price=Number(tick.mid??((Number(tick.bid)+Number(tick.ask))/2)),ms=Date.parse(tick.timestamp);if(!Number.isFinite(price)||!Number.isFinite(ms))return;proxTicks[pair]={price,ms};let mins=Number($('tf').value)||5,t=proxCandleStart(ms,mins),a=proxActive[pair];if(a&&a.t<t){(proxClosed[pair]||(proxClosed[pair]=[])).push(a);proxClosed[pair]=proxClosed[pair].slice(-150);a=null}if(!a||a.t!==t)a=proxActive[pair]={t,o:price,h:price,l:price,c:price};else{a.h=Math.max(a.h,price);a.l=Math.min(a.l,price);a.c=price}});proxHub.onreconnected(()=>proxHub.invoke('Subscribe',Object.values(biqSymbols)).catch(()=>{}));proxHub.start().then(()=>proxHub.invoke('Subscribe',Object.values(biqSymbols))).then(()=>{proxConnected=true;updateProvider()}).catch(e=>{proxConnected=false;$('providerStatus').textContent='BiQuote live tick कनेक्शन: '+e.message+'; OHLC डेटा अलग से लिया जाएगा।'})}catch(e){proxHub=null}}
+async function biquoteCandles(pair,mins){let symbol=biqSymbols[pair],url='https://biquote.io/api/'+symbol+'/ohlc?interval='+mins+'m&limit=150',r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('BiQuote HTTP '+r.status);let j=await r.json();if(!Array.isArray(j.bars))throw Error(j.message||'BiQuote candles उपलब्ध नहीं');let bars=j.bars.filter(x=>!x.isOpen).map(x=>({time:new Date(x.openTime).toISOString().slice(0,19).replace('T',' '),open:+x.open,high:+x.high,low:+x.low,close:+x.close}));let live=[...(proxClosed[pair]||[])];if(proxActive[pair]&&proxActive[pair].t+mins*60000<=Date.now()+1000)live.push(proxActive[pair]);let map=new Map(bars.map(x=>[Date.parse(x.time.replace(' ','T')+'Z'),x]));for(let b of live){if(b.t+mins*60000<=Date.now()+1000)map.set(b.t,{time:new Date(b.t).toISOString().slice(0,19).replace('T',' '),open:b.o,high:b.h,low:b.l,close:b.c})}bars=[...map.values()].sort((a,b)=>a.time.localeCompare(b.time));if(bars.length<30)throw Error('BiQuote से 30 बंद candles नहीं मिलीं');let last=Date.parse(bars.at(-1).time.replace(' ','T')+'Z'),expected=Math.floor(Date.now()/(mins*60000))*mins*60000-mins*60000;if(last<expected-1000)throw Error('DATA DELAY: BiQuote की बंद candle ताज़ा नहीं है।');return bars.slice(-120)}
 const $=id=>document.getElementById(id);
 function updateNextCandleClock(){
  const tf=Math.max(1,Number($('tf').value)||5),step=tf*60000,now=Date.now();
@@ -65,7 +71,7 @@ let timer=null,scanBusy=false,lastAutoBoundary=0;
 $('tf').value='5';
 try{$('key').value=localStorage.getItem('tdkey')||'';}catch(e){say('Browser storage बंद है। Site settings में storage/cookies allow करें।')}
 function say(t){$('status').textContent=t}
-function saveKey(){const k=$('key').value.trim();if(!k){say('पहले API key डालें।');$('key').focus();return}try{localStorage.setItem('tdkey',k);const saved=localStorage.getItem('tdkey');if(saved===k){say('Key सेव हो गई। अब पेज Refresh करके जाँचें।')}else{say('Key सेव नहीं हुई। Chrome में इस साइट की storage अनुमति चालू करें।')}}catch(e){say('Key सेव नहीं हुई। Chrome में इस साइट की storage/cookies अनुमति चालू करें।')}}
+function saveKey(){const k=$('key').value.trim();try{if(k){localStorage.setItem('tdkey',k);say('Twelve Data Key सेव हो गई। अब Twelve Data से स्कैन होगा।')}else{localStorage.removeItem('tdkey');say('Key हट गई। अब मुफ्त BiQuote डेटा से स्कैन होगा।')}updateProvider()}catch(e){say('Key सेव/हट नहीं हुई। Chrome में इस साइट की storage अनुमति चालू करें।')}}
 $('save').addEventListener('click',saveKey);
 function ema(a,n){let k=2/(n+1),v=a[0];for(let i=1;i<a.length;i++)v=a[i]*k+v*(1-k);return v}
 function rsi(a){let g=0,l=0;for(let i=a.length-14;i<a.length;i++){let d=a[i]-a[i-1];if(d>0)g+=d;else l-=d}if(l===0)return 100;let rs=(g/14)/(l/14);return 100-100/(1+rs)}
@@ -142,12 +148,19 @@ function candlePsychology(c){
 }
 async function one(pair,key){
  const minutes=Number($('tf').value);
- const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval=1min&outputsize=500&timezone=UTC&apikey='+encodeURIComponent(key);
- const res=await fetch(url);const j=await res.json();if(!j.values)throw Error(j.message||'डेटा उपलब्ध नहीं');
- const raw=j.values.map(v=>({time:v.datetime,open:+v.open,high:+v.high,low:+v.low,close:+v.close})).reverse();
- const step=minutes*60000,groups=new Map();
- for(const x of raw){const t=new Date(x.time.replace(' ','T')+'Z').getTime(),start=Math.floor(t/step)*step;if(start+step>Date.now())continue;const g=groups.get(start);if(!g)groups.set(start,{time:new Date(start).toISOString().slice(0,19).replace('T',' '),open:x.open,high:x.high,low:x.low,close:x.close});else{g.high=Math.max(g.high,x.high);g.low=Math.min(g.low,x.low);g.close=x.close;}}
- let c=[...groups.values()].sort((a,b)=>a.time.localeCompare(b.time));
+ const minutes=Number($('tf').value);
+ let c;
+ if(key){
+  const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval=1min&outputsize=500&timezone=UTC&apikey='+encodeURIComponent(key);
+  const res=await fetch(url);const j=await res.json();if(!j.values)throw Error(j.message||'Twelve Data candles उपलब्ध नहीं');
+  const raw=j.values.map(v=>({time:v.datetime,open:+v.open,high:+v.high,low:+v.low,close:+v.close})).reverse();
+  const step=minutes*60000,groups=new Map();
+  for(const x of raw){const t=new Date(x.time.replace(' ','T')+'Z').getTime(),start=Math.floor(t/step)*step;if(start+step>Date.now())continue;const g=groups.get(start);if(!g)groups.set(start,{time:new Date(start).toISOString().slice(0,19).replace('T',' '),open:x.open,high:x.high,low:x.low,close:x.close});else{g.high=Math.max(g.high,x.high);g.low=Math.min(g.low,x.low);g.close=x.close;}}
+  c=[...groups.values()].sort((a,b)=>a.time.localeCompare(b.time));
+ }else{
+  startProxBiQuote();
+  c=await biquoteCandles(pair,minutes);
+ }
  if(c.length<30)throw Error('पर्याप्त candles नहीं');
  const closes=c.map(x=>x.close),last=c[c.length-1],prev=c[c.length-2];
  const e9=ema(closes.slice(-30),9),e21=ema(closes.slice(-50),21),rv=rsi(closes),adx=strength(c),m=macd(closes);
@@ -184,7 +197,7 @@ async function one(pair,key){
 }
 async function scan(){
  if(scanBusy)return;
- const key=(()=>{try{return localStorage.getItem('tdkey')||$('key').value.trim()}catch(e){return $('key').value.trim()}})();if(!key){say('API key डालें और Key सेव करें।');return}
+ const key=(()=>{try{return localStorage.getItem('tdkey')||''}catch(e){return ''}})();
  scanBusy=true;
  $('scan').disabled=true;$('auto').disabled=true;say('Market data जाँचा जा रहा है…');$('results').innerHTML='';
  let html='',probabilityHtml='';
@@ -220,8 +233,7 @@ $('tf').addEventListener('change',()=>{
 $('auto').onclick=()=>{
  if(timer){clearInterval(timer);timer=null;$('auto').textContent='Auto Scan चालू करें';say('Auto Scan बंद है।');}
  else{
-  if(!$('key').value.trim()&&!(()=>{try{return localStorage.getItem('tdkey')}catch(e){return ''}})()){say('पहले API key डालें।');return}
-  try{localStorage.setItem('tdkey',$('key').value.trim()||localStorage.getItem('tdkey')||'')}catch(e){say('Browser storage की अनुमति दें।');return}
+  try{const entered=$('key').value.trim();if(entered)localStorage.setItem('tdkey',entered);else localStorage.removeItem('tdkey');updateProvider()}catch(e){say('Browser storage की अनुमति दें।');return}
   $('auto').textContent='Auto Scan बंद करें';
   startBoundaryAutoScan();
   say('Auto Scan चालू: हर कैंडल बंद होने के लगभग 8 सेकंड बाद स्कैन होगा।');
