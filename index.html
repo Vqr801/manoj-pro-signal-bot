@@ -74,10 +74,19 @@ async function getBars(pair,mins,key){
   if(!r.ok||!Array.isArray(j.values))throw Error(j.message||j.status||'Twelve Data candle API error');
   raw=j.values.map(v=>({t:Date.parse(v.datetime.replace(' ','T')+'Z'),o:+v.open,h:+v.high,l:+v.low,c:+v.close})).filter(x=>Number.isFinite(x.t)).sort((a,b)=>a.t-b.t);
  }else{
+  // Verify a strictly fresh tick first. BiQuote returns 404 if the quote is >5 minutes old.
+  const tickUrl='https://biquote.io/api/'+symbols[pair]+'?allowStale=false';
+  const tr=await fetch(tickUrl,{cache:'no-store'});let tick=null;try{tick=await tr.json()}catch(e){}
+  if(!tr.ok)throw Error('BiQuote LIVE tick उपलब्ध नहीं (HTTP '+tr.status+'): '+(tick?.message||tick?.error||'quote stale / feed unavailable'));
+  const age=Number(tick.quoteAgeSeconds);
+  const stamp=Date.parse(tick.timestamp||tick.lastQuoteAt);
+  if(!Number.isFinite(stamp)||!Number.isFinite(age)||age>300)throw Error('BiQuote tick ताज़ा नहीं: quoteAgeSeconds='+(Number.isFinite(age)?age:'unknown')+'; सिग्नल रोका गया');
   const u='https://biquote.io/api/'+symbols[pair]+'/ohlc?interval='+native+'&limit=500';
   const r=await fetch(u,{cache:'no-store'}),j=await r.json();
-  if(!r.ok||!Array.isArray(j.bars))throw Error(j.message||j.error||'BiQuote candle endpoint/schema error');
+  if(!r.ok||!Array.isArray(j.bars))throw Error(j.message||j.error||'BiQuote OHLC API error');
   raw=j.bars.filter(x=>x.isOpen!==true).map(x=>({t:Date.parse(x.openTime),o:+x.open,h:+x.high,l:+x.low,c:+x.close})).filter(x=>Number.isFinite(x.t)).sort((a,b)=>a.t-b.t);
+  const newest=raw.at(-1)?.t;
+  if(!Number.isFinite(newest)||stamp-newest>Math.max(step*2,600000))throw Error('BiQuote live tick ताज़ा ('+fmt(stamp)+') है, लेकिन OHLC candle feed पीछे है (आखिरी बंद candle '+(Number.isFinite(newest)?fmt(newest):'missing')+'). candle feed सुधरने तक कोई signal नहीं।');
  }
  // Group provider candles into selected timeframe using UTC epoch boundaries.
  const map=new Map();
