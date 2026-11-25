@@ -148,7 +148,6 @@ function candlePsychology(c){
 }
 async function one(pair,key){
  const minutes=Number($('tf').value);
- const minutes=Number($('tf').value);
  let c;
  if(key){
   const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval=1min&outputsize=500&timezone=UTC&apikey='+encodeURIComponent(key);
