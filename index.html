@@ -1,25 +1,234 @@
 <!doctype html>
 <html lang="hi">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#101827">
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./icon.svg" type="image/svg+xml">
-<title>ProX Forex Signal Bot</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101827"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml">
+<title>ProX Signal</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#101827;color:#edf2f7;font:16px system-ui,Arial}header{padding:22px 16px;background:#17243a;text-align:center;border-bottom:1px solid #30415b}h1{margin:0;font-size:23px;color:#68e0bd}header p{margin:7px 0 0;color:#bac7d8;font-size:13px}.wrap{max-width:850px;margin:auto;padding:16px}.card{background:#19263b;border:1px solid #30415b;border-radius:12px;padding:15px;margin:12px 0}label{display:block;margin-bottom:7px;color:#cbd5e1}input,button{font:inherit;border-radius:8px;padding:12px;border:1px solid #52647d}input{width:100%;background:#0e1726;color:white}button{background:#1aa783;color:#061b16;font-weight:700;border:0;margin-top:10px;width:100%}button:disabled{opacity:.5}.muted{font-size:13px;color:#aab8ca;line-height:1.5}.status{padding:10px;border-radius:8px;background:#0e1726;margin-top:10px}.row{display:flex;justify-content:space-between;gap:10px;align-items:center;border-bottom:1px solid #30415b;padding:12px 0}.row:last-child{border:0}.call{color:#57e0a4;font-weight:800}.put{color:#ff8585;font-weight:800}.wait{color:#f5ce70;font-weight:800}.small{font-size:12px;color:#aab8ca}.warning{color:#ffd28a}.top{display:flex;gap:10px;flex-wrap:wrap}.top button{flex:1;min-width:130px}
+/* Laptop/desktop layout: mobile styles above remain unchanged. */
+@media (min-width: 900px){
+ body{font-size:16px;background:radial-gradient(ellipse at top,#1b2c45 0%,#101827 58%)}
+ header{padding:30px 28px;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:24px}
+ header h1{font-size:30px;letter-spacing:.3px}
+ header p{font-size:14px;margin:0;text-align:right}
+ .wrap{max-width:1440px;width:calc(100% - 64px);padding:28px 0;display:grid;grid-template-columns:minmax(360px,.9fr) minmax(520px,1.35fr);gap:20px;align-items:start}
+ .card{margin:0;padding:22px;border-radius:16px;box-shadow:0 12px 32px rgba(0,0,0,.18)}
+ .wrap>.card:nth-child(2){min-height:390px}
+ .wrap>.card:nth-child(3){grid-column:1/-1}
+ .wrap>.card:nth-child(3){line-height:1.8}
+ input,button,.card select{font-size:15px}
+ button{cursor:pointer;transition:filter .15s,transform .15s}
+ button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+ .row{padding:16px 8px}
+ .small{font-size:13px;line-height:1.65}
+ #results .row>div:first-child{min-width:0;flex:1}
+ #results .row>div:last-child{min-width:100px;text-align:right;font-size:16px}
+ .status{padding:13px 15px}
+}
+@media (min-width: 1400px){.wrap{grid-template-columns:minmax(420px,.85fr) minmax(650px,1.4fr);gap:24px}.card{padding:26px}}
+</style>
 </head>
-<body style="margin:0;background:#101827;color:#edf2f7;font:16px system-ui;display:grid;place-items:center;min-height:100vh">
-<p>ProX Bot खुल रहा है…</p>
+<body>
+<header><h1>ProX SIGNAL</h1><p>5 मिनट High Confidence Forex Signal • भारतीय समय (IST) • CALL / PUT / NO TRADE</p></header>
+<main class="wrap">
+<div class="card">
+<label for="key">Twelve Data API Key</label>
+<input id="key" type="password" autocomplete="off" placeholder="अपनी API key यहाँ डालें">
+<div class="muted warning">सुरक्षा: API key इसी browser के local storage में सेव होगी, सार्वजनिक HTML में नहीं। यह browser में देखी जा सकती है और API provider को भेजी जाती है। साझा मोबाइल पर सेव न करें।</div>
+<label for="pair" style="margin-top:14px">टॉप 5 करेंसी चुनें</label><select id="pair" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="ALL">टॉप 5 करेंसी</option><option value="EUR/USD">EUR/USD</option><option value="GBP/USD">GBP/USD</option><option value="USD/JPY">USD/JPY</option><option value="AUD/USD">AUD/USD</option><option value="USD/CAD">USD/CAD</option></select>
+<label for="tf" style="margin-top:14px">सिग्नल का समय चुनें</label><select id="tf" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="1">1 मिनट</option><option value="2">2 मिनट</option><option value="3">3 मिनट</option><option value="5" selected>5 मिनट</option></select><div class="top"><button id="save" type="button">Key सेव करें</button><button id="scan">अभी Scan करें</button></div>
+<div id="status" class="status">पहले API key डालें।</div>
+</div>
+<div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">चुने हुए समय के अनुसार जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
+<div class="card">
+<h3 style="margin:0 0 10px;color:#68e0bd">अगली कैंडल: Green / Red संभावना</h3>
+<div id="nextCandleTime" class="status" style="font-weight:800;color:#68e0bd">अगली कैंडल का समय: गणना हो रही है…</div>
+<div id="probability" class="status">पहले Scan करें। चुने हुए टाइमफ्रेम की पिछली बंद candles के आधार पर अनुमान दिखेगा।</div>
+<p class="small warning">ये प्रतिशत हाल की अधिकतम 100 बंद candles में Green (Close > Open) और Red (Close < Open) के अनुपात हैं। यह ऐतिहासिक आवृत्ति है, भविष्य की गारंटी या प्रमाणित जीत-सम्भावना नहीं। डेटा कम होने पर अनुमान कम भरोसेमंद होगा।</p>
+</div>
+<div class="card muted"><b>रणनीति:</b> EMA 9/21, RSI 14, MACD (12/26/9), ADX-जैसी trend strength के साथ अब Supertrend (ATR 10, factor 3), Bollinger Bands (20, 2) और Stochastic (14) की पुष्टि भी शामिल है। 80/100 से कम स्कोर, ADX 20 से कम, कमजोर ट्रेंड, विपरीत MACD या candle confirmation न मिलने पर NO TRADE। मजबूत EMA और MACD दिशा जरूरी रहेगी; breakout bonus है, अनिवार्य शर्त नहीं। अगली कैंडल के GREEN/RED प्रतिशत मौजूदा तकनीकी संकेतकों के स्कोर पर आधारित अनुमान हैं। यह भविष्यवाणी की गारंटी या वास्तविक ट्रेड जीत दर नहीं है। पहले demo पर जाँचें।</div>
+</main>
 <script>
-(async()=>{
- try{
-  if('serviceWorker' in navigator){
-   const registration=await navigator.serviceWorker.register('./sw.js');
-   await navigator.serviceWorker.ready;
+const pairs=['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD'];
+const $=id=>document.getElementById(id);
+function updateNextCandleClock(){
+ const tf=Math.max(1,Number($('tf').value)||5),step=tf*60000,now=Date.now();
+ const start=new Date((Math.floor(now/step)+1)*step),end=new Date(start.getTime()+step);
+ const fmt=d=>new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true}).format(d);
+ $('nextCandleTime').textContent='अगली कैंडल का समय: '+fmt(start)+' से '+fmt(end)+' IST ('+tf+' मिनट)';
+}
+updateNextCandleClock();
+setInterval(updateNextCandleClock,1000);
+let timer=null,scanBusy=false,lastAutoBoundary=0;
+// इस बॉट का डिफॉल्ट सिग्नल टाइम 5 मिनट रखें
+$('tf').value='5';
+try{$('key').value=localStorage.getItem('tdkey')||'';}catch(e){say('Browser storage बंद है। Site settings में storage/cookies allow करें।')}
+function say(t){$('status').textContent=t}
+function saveKey(){const k=$('key').value.trim();if(!k){say('पहले API key डालें।');$('key').focus();return}try{localStorage.setItem('tdkey',k);const saved=localStorage.getItem('tdkey');if(saved===k){say('Key सेव हो गई। अब पेज Refresh करके जाँचें।')}else{say('Key सेव नहीं हुई। Chrome में इस साइट की storage अनुमति चालू करें।')}}catch(e){say('Key सेव नहीं हुई। Chrome में इस साइट की storage/cookies अनुमति चालू करें।')}}
+$('save').addEventListener('click',saveKey);
+function ema(a,n){let k=2/(n+1),v=a[0];for(let i=1;i<a.length;i++)v=a[i]*k+v*(1-k);return v}
+function rsi(a){let g=0,l=0;for(let i=a.length-14;i<a.length;i++){let d=a[i]-a[i-1];if(d>0)g+=d;else l-=d}if(l===0)return 100;let rs=(g/14)/(l/14);return 100-100/(1+rs)}
+function strength(c){let tr=0,plus=0,minus=0;for(let i=c.length-14;i<c.length;i++){let x=c[i],p=c[i-1];let up=x.high-p.high,down=p.low-x.low;tr+=Math.max(x.high-x.low,Math.abs(x.high-p.close),Math.abs(x.low-p.close));if(up>down&&up>0)plus+=up;if(down>up&&down>0)minus+=down}if(!tr)return 0;return Math.abs(plus-minus)/tr*100}
+function macd(a){const line=[];for(let i=0;i<a.length;i++){const s=a.slice(0,i+1);line.push(ema(s,12)-ema(s,26));}const signal=ema(line.slice(-9),9);return {line:line[line.length-1],signal,previous:line[line.length-2]};}
+function atr(c,n=10){let tr=[];for(let i=1;i<c.length;i++){const x=c[i],p=c[i-1];tr.push(Math.max(x.high-x.low,Math.abs(x.high-p.close),Math.abs(x.low-p.close)));}return tr.slice(-n).reduce((a,b)=>a+b,0)/Math.min(n,tr.length)}
+function supertrend(c,n=10,mult=3){let a=atr(c,n),mid=(c[c.length-1].high+c[c.length-1].low)/2;return {line:mid-mult*a,atr:a,up:c[c.length-1].close>mid-mult*a};}
+function bollinger(a,n=20){const v=a.slice(-n),mean=v.reduce((x,y)=>x+y,0)/v.length,sd=Math.sqrt(v.reduce((x,y)=>x+(y-mean)**2,0)/v.length);return {upper:mean+2*sd,middle:mean,lower:mean-2*sd};}
+function stochastic(c,n=14){const v=c.slice(-n),hi=Math.max(...v.map(x=>x.high)),lo=Math.min(...v.map(x=>x.low)),cl=c[c.length-1].close;return hi===lo?50:(cl-lo)/(hi-lo)*100;}
+function historicalWinRate(c){
+ let wins=0,total=0;
+ for(let i=55;i<c.length-1;i++){
+  const h=c.slice(0,i+1),cl=h.map(x=>x.close),last=h[h.length-1],prev=h[h.length-2];
+  const e9=ema(cl.slice(-30),9),e21=ema(cl.slice(-50),21),rv=rsi(cl),adx=strength(h),m=macd(cl),bb=bollinger(cl),sk=stochastic(h),st=supertrend(h),a=st.atr;
+  const bull=last.close>last.open,bear=last.close<last.open,mb=m.line>m.signal&&m.line>0,ms=m.line<m.signal&&m.line<0,up=e9>e21&&last.close>e21,dn=e9<e21&&last.close<e21;
+  let call=0,put=0;
+  if(up)call+=15;if(dn)put+=15;
+  if(rv>=55&&rv<=68)call+=10;if(rv<=45&&rv>=32)put+=10;
+  if(adx>=20){if(up)call+=10;if(dn)put+=10;}
+  if(mb)call+=15;if(ms)put+=15;
+  if(bull)call+=5;if(bear)put+=5;
+  if(last.close>prev.high)call+=10;if(last.close<prev.low)put+=10;
+  if(st.up)call+=15;else put+=15;
+  if(last.close>bb.middle&&last.close<bb.upper)call+=10;
+  if(last.close<bb.middle&&last.close>bb.lower)put+=10;
+  if(sk>=55&&sk<=80)call+=10;if(sk<=45&&sk>=20)put+=10;
+  if(!(a>0&&(a/last.close*100)>0.001))continue;
+  let side='';
+  if(call>=80&&call>put+15&&mb&&up&&adx>=20&&bull)side='CALL';
+  else if(put>=80&&put>call+15&&ms&&dn&&adx>=20&&bear)side='PUT';
+  if(!side)continue;
+  total++;
+  const next=c[i+1].close;
+  if((side==='CALL'&&next>last.close)||(side==='PUT'&&next<last.close))wins++;
+ }
+ return {wins,total,rate:total?Math.round(wins/total*100):null};
+}
+
+function candlePsychology(c){
+ // Analyze only the most recent fully closed, aggregated candle.
+ const x=c[c.length-1],p=c[c.length-2];
+ const o=x.open,h=x.high,l=x.low,cl=x.close;
+ const range=h-l,body=Math.abs(cl-o),upper=h-Math.max(o,cl),lower=Math.min(o,cl)-l;
+ if(!(range>0))return {pattern:'अमान्य OHLC',psych:'कैंडल का High/Low डेटा सही नहीं',call:0,put:0,bodyPct:0,upperWick:0,lowerWick:0};
+ const bodyPct=body/range,upPct=upper/range,lowPct=lower/range;
+ const bull=cl>o,bear=cl<o,prevBull=p.close>p.open,prevBear=p.close<p.open;
+ const closes=c.map(v=>v.close),trendUp=ema(closes.slice(-30),9)>ema(closes.slice(-50),21);
+ const trendDown=ema(closes.slice(-30),9)<ema(closes.slice(-50),21);
+ let pattern='कोई स्पष्ट मानक पैटर्न नहीं',psych='इस कैंडल से अकेले बाजार की मनोवृत्ति निश्चित नहीं; अगले संकेत की पुष्टि जरूरी';
+ let call=0,put=0;
+ // Strict body engulfing: current body fully covers previous body.
+ const bullEngulf=bull&&prevBear&&o<=p.close&&cl>=p.open&&body>Math.abs(p.close-p.open);
+ const bearEngulf=bear&&prevBull&&o>=p.close&&cl<=p.open&&body>Math.abs(p.close-p.open);
+ if(bullEngulf){pattern='Bullish Engulfing (body-confirmed)';psych='हरी कैंडल का वास्तविक बॉडी पिछली लाल बॉडी को पूरी तरह ढकता है';call=12;}
+ else if(bearEngulf){pattern='Bearish Engulfing (body-confirmed)';psych='लाल कैंडल का वास्तविक बॉडी पिछली हरी बॉडी को पूरी तरह ढकता है';put=12;}
+ else if(bodyPct<=0.10){pattern='Doji';psych='छोटी बॉडी: खरीदार-विक्रेता में अनिर्णय; दिशा का संकेत नहीं';}
+ else if(lowPct>=0.60&&bodyPct<=0.30&&upPct<=0.15){
+  if(trendDown){pattern='Hammer shape (downtrend context)';psych='नीचे लंबी wick और नीचे का trend: संभावित rejection, पुष्टि बाकी';call=8;}
+  else if(trendUp){pattern='Hanging Man shape (uptrend context)';psych='ऊपर के trend में लंबी नीचे की wick: संभावित चेतावनी, पुष्टि बाकी';}
+  else {pattern='Long Lower Wick';psych='नीचे की कीमतें अस्वीकार हुईं; trend संदर्भ नहीं मिला';}
+ }
+ else if(upPct>=0.60&&bodyPct<=0.30&&lowPct<=0.15){
+  if(trendUp){pattern='Shooting Star shape (uptrend context)';psych='ऊपर लंबी wick और ऊपर का trend: संभावित rejection, पुष्टि बाकी';put=8;}
+  else if(trendDown){pattern='Inverted Hammer shape (downtrend context)';psych='नीचे के trend में ऊपर की wick: संभावित reversal, पुष्टि बाकी';}
+  else {pattern='Long Upper Wick';psych='ऊँची कीमतें अस्वीकार हुईं; trend संदर्भ नहीं मिला';}
+ }
+ else if(bodyPct>=0.85&&upPct<=0.08&&lowPct<=0.08){
+  pattern=bull?'Bullish Marubozu-like (strong body)':'Bearish Marubozu-like (strong body)';
+  psych=bull?'बंद भाव open के ऊपर और wick छोटी: इस candle में खरीदार मजबूत':'बंद भाव open के नीचे और wick छोटी: इस candle में विक्रेता मजबूत';
+  if(bull)call=7;else if(bear)put=7;
+ }
+ else if(h<p.high&&l>p.low){pattern='Inside Bar (strict)';psych='पूरी कैंडल पिछली कैंडल के range के भीतर; breakout अभी confirm नहीं';}
+ return {pattern,psych,call,put,bodyPct:Math.round(bodyPct*100),upperWick:Math.round(upPct*100),lowerWick:Math.round(lowPct*100)};
+}
+async function one(pair,key){
+ const minutes=Number($('tf').value);
+ const url='https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(pair)+'&interval=1min&outputsize=500&timezone=UTC&apikey='+encodeURIComponent(key);
+ const res=await fetch(url);const j=await res.json();if(!j.values)throw Error(j.message||'डेटा उपलब्ध नहीं');
+ const raw=j.values.map(v=>({time:v.datetime,open:+v.open,high:+v.high,low:+v.low,close:+v.close})).reverse();
+ const step=minutes*60000,groups=new Map();
+ for(const x of raw){const t=new Date(x.time.replace(' ','T')+'Z').getTime(),start=Math.floor(t/step)*step;if(start+step>Date.now())continue;const g=groups.get(start);if(!g)groups.set(start,{time:new Date(start).toISOString().slice(0,19).replace('T',' '),open:x.open,high:x.high,low:x.low,close:x.close});else{g.high=Math.max(g.high,x.high);g.low=Math.min(g.low,x.low);g.close=x.close;}}
+ let c=[...groups.values()].sort((a,b)=>a.time.localeCompare(b.time));
+ if(c.length<30)throw Error('पर्याप्त candles नहीं');
+ const closes=c.map(x=>x.close),last=c[c.length-1],prev=c[c.length-2];
+ const e9=ema(closes.slice(-30),9),e21=ema(closes.slice(-50),21),rv=rsi(closes),adx=strength(c),m=macd(closes);
+ const bb=bollinger(closes),stoch=stochastic(c),st=supertrend(c),a=st.atr;
+ const bullish=last.close>last.open,bearish=last.close<last.open;
+ const macdBull=m.line>m.signal&&m.line>0,macdBear=m.line<m.signal&&m.line<0;
+ const macdState=macdBull?'Bullish':macdBear?'Bearish':'Mixed';
+ const up=e9>e21&&last.close>e21,down=e9<e21&&last.close<e21;
+ const volOk=a>0&&(a/last.close*100)>0.001;
+ const candleRead=candlePsychology(c);
+ let call=candleRead.call,put=candleRead.put;
+ if(up)call+=15;if(down)put+=15;
+ if(rv>=55&&rv<=68)call+=10;if(rv<=45&&rv>=32)put+=10;
+ if(adx>=20){if(up)call+=10;if(down)put+=10;}
+ if(macdBull)call+=15;if(macdBear)put+=15;
+ if(bullish)call+=5;if(bearish)put+=5;
+ if(last.close>prev.high)call+=10;if(last.close<prev.low)put+=10;
+ if(st.up)call+=15;else put+=15;
+ if(last.close>bb.middle&&last.close<bb.upper)call+=10;
+ if(last.close<bb.middle&&last.close>bb.lower)put+=10;
+ if(stoch>=55&&stoch<=80)call+=10;if(stoch<=45&&stoch>=20)put+=10;
+ if(!volOk){call=0;put=0;}
+ const score=Math.max(call,put);let side='NO TRADE';
+ if(call>=80&&call>put+15&&macdBull&&up&&adx>=20&&bullish)side='CALL';
+ else if(put>=80&&put>call+15&&macdBear&&down&&adx>=20&&bearish)side='PUT';
+ // अगली बंद होने वाली candle के लिए heuristic direction estimate.
+ // यह calibrated probability नहीं है; मौजूदा technical signal scores से directional bias है.
+ const scoreDiff=call-put;
+ const greenEstimate=Math.max(25,Math.min(75,Math.round(50+scoreDiff*0.25)));
+ const odds={green:greenEstimate,red:100-greenEstimate,greenCount:0,redCount:0,doji:0,sample:0,counted:0,callScore:call,putScore:put};
+ const candleCloseUtc=new Date(Date.parse(last.time.replace(' ','T')+'Z')+minutes*60000).toISOString().slice(0,19).replace('T',' ');
+ const scanNow=Date.now(),forecastStep=minutes*60000,forecastOpenUtc=new Date(Math.max(Date.parse(candleCloseUtc.replace(' ','T')+'Z'),Math.floor(scanNow/forecastStep)*forecastStep)).toISOString().slice(0,19).replace('T',' '),forecastCloseUtc=new Date(Date.parse(forecastOpenUtc.replace(' ','T')+'Z')+forecastStep).toISOString().slice(0,19).replace('T',' '),scanUtc=new Date(scanNow).toISOString().slice(0,19).replace('T',' ');
+ return {pair,side,score,rsi:rv,adx,openTime:last.time,closeTime:candleCloseUtc,forecastOpenTime:forecastOpenUtc,forecastCloseTime:forecastCloseUtc,time:candleCloseUtc,scanTime:scanUtc,price:last.close,macdState,stoch,supertrend:st.up?'Bullish':'Bearish',bbState:last.close>bb.upper?'Upper breakout':last.close<bb.lower?'Lower breakout':'Inside bands',candleRead,odds};
+}
+async function scan(){
+ if(scanBusy)return;
+ const key=(()=>{try{return localStorage.getItem('tdkey')||$('key').value.trim()}catch(e){return $('key').value.trim()}})();if(!key){say('API key डालें और Key सेव करें।');return}
+ scanBusy=true;
+ $('scan').disabled=true;$('auto').disabled=true;say('Market data जाँचा जा रहा है…');$('results').innerHTML='';
+ let html='',probabilityHtml='';
+ const selected=$('pair').value;
+ const scanPairs=selected==='ALL'?pairs:[selected];
+ for(const p of scanPairs){
+  try{const x=await one(p,key);let cls=x.side==='CALL'?'call':x.side==='PUT'?'put':'wait';html+='<div class="row"><div><b>'+x.pair+'</b><div class="small">भाव: '+x.price+' • RSI '+x.rsi.toFixed(1)+' • Trend '+x.adx.toFixed(1)+' • MACD '+x.macdState+' • Stoch '+x.stoch.toFixed(0)+' • Supertrend '+x.supertrend+' • BB '+x.bbState+' • Score '+x.score+'/100 • '+'कैंडल खुली: '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.openTime.replace(' ','T')+'Z'))+' IST • कैंडल बंद: '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.closeTime.replace(' ','T')+'Z'))+' IST • Scan: '+new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(x.scanTime.replace(' ','T')+'Z'))+' IST</div></div><div class="'+cls+'">'+x.side+'</div></div>';const tfMinutes=Number($('tf').value),nextOpen=new Date(x.forecastOpenTime.replace(' ','T')+'Z'),nextClose=new Date(x.forecastCloseTime.replace(' ','T')+'Z'),timeFmt=d=>new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true}).format(d),basisOpen=new Date(x.openTime.replace(' ','T')+'Z'),basisClose=new Date(x.closeTime.replace(' ','T')+'Z');probabilityHtml+='<div class="card" style="margin:8px 0;padding:12px"><b>'+x.pair+' · अगली '+tfMinutes+' मिनट की कैंडल</b><div class="small" style="font-weight:800;color:#68e0bd;margin:6px 0 10px">अगली कैंडल का समय: '+timeFmt(nextOpen)+' से '+timeFmt(nextClose)+' IST</div><div class="small">अनुमान का आधार: पिछली पूरी बंद कैंडल '+timeFmt(basisOpen)+' से '+timeFmt(basisClose)+' IST के संकेतक</div><div class="top" style="gap:8px"><div style="flex:1;background:#103b30;border:1px solid #2d9c76;border-radius:10px;padding:12px;text-align:center"><div class="call">GREEN अनुमान</div><div style="font-size:28px;font-weight:800">'+x.odds.green+'%</div><div class="small">तकनीकी स्कोर '+x.odds.callScore+'/100</div></div><div style="flex:1;background:#42252d;border:1px solid #bd6576;border-radius:10px;padding:12px;text-align:center"><div class="put">RED अनुमान</div><div style="font-size:28px;font-weight:800">'+x.odds.red+'%</div><div class="small">तकनीकी स्कोर '+x.odds.putScore+'/100</div></div></div><div class="status" style="margin-top:10px;border:1px solid #3b806f"><b style="color:#68e0bd">CANDLE PATTERN:</b> '+x.candleRead.pattern+'<div style="margin-top:8px"><b style="color:#68e0bd">MARKET PSYCHOLOGY:</b> '+x.candleRead.psych+'</div><div class="small" style="margin-top:8px">Body: '+x.candleRead.bodyPct+'% • Upper Wick: '+x.candleRead.upperWick+'% • Lower Wick: '+x.candleRead.lowerWick+'%</div></div><div class="small">यह अगली कैंडल की तकनीकी दिशा का अनुमान है, प्रमाणित probability या जीत की गारंटी नहीं।</div></div>'}
+  catch(e){html+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,90)+'</div></div><div class="wait">डेटा नहीं</div></div>'}
+  $('results').innerHTML=html;
+  $('probability').innerHTML=probabilityHtml||'इस बार संभावना निकालने के लिए पर्याप्त डेटा नहीं मिला।';
+ }
+ say('Scan पूरा हुआ ('+ $('tf').value +' मिनट)। अगला Auto Scan अगली पूरी कैंडल बंद होने के तुरंत बाद होगा।');$('scan').disabled=false;$('auto').disabled=false;scanBusy=false;
+}
+$('scan').onclick=scan;
+function startBoundaryAutoScan(){
+ if(timer){clearInterval(timer);timer=null;}
+ lastAutoBoundary=0;
+ const check=()=>{
+  const step=Number($('tf').value)*60000;
+  const now=Date.now();
+  const boundary=Math.floor(now/step)*step;
+  if(now>=boundary+8000&&boundary>lastAutoBoundary&&!scanBusy){
+   lastAutoBoundary=boundary;
+   scan();
   }
- }catch(e){}
- location.replace('./app.html?v=9');
-})();
+ };
+ check();
+ timer=setInterval(check,5000);
+}
+$('tf').addEventListener('change',()=>{
+ if(timer){startBoundaryAutoScan();say('समय बदल गया। अब '+$('tf').value+' मिनट की हर पूरी कैंडल बंद होने के बाद स्कैन होगा।');}
+});
+$('auto').onclick=()=>{
+ if(timer){clearInterval(timer);timer=null;$('auto').textContent='Auto Scan चालू करें';say('Auto Scan बंद है।');}
+ else{
+  if(!$('key').value.trim()&&!(()=>{try{return localStorage.getItem('tdkey')}catch(e){return ''}})()){say('पहले API key डालें।');return}
+  try{localStorage.setItem('tdkey',$('key').value.trim()||localStorage.getItem('tdkey')||'')}catch(e){say('Browser storage की अनुमति दें।');return}
+  $('auto').textContent='Auto Scan बंद करें';
+  startBoundaryAutoScan();
+  say('Auto Scan चालू: हर कैंडल बंद होने के लगभग 8 सेकंड बाद स्कैन होगा।');
+ }
+};
 </script>
-</body>
-</html>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+</script>
+</body></html>
