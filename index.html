@@ -82,7 +82,7 @@ async function collectSamples(){
 }
 if(!source()){collectSamples();tickTimer=setInterval(collectSamples,12000)}
 function fmt(t){return new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(t))+' IST'}
-function clock(){let m=Number($('tf').value)||5,step=m*60000,n=Date.now(),o=Math.floor(n/step)*step+step;$('nextCandleTime').textContent='अगली कैंडल: '+fmt(o)+' से '+fmt(o+step)}
+function clock(){let m=Number($('tf').value)||5,step=m*60000,n=Date.now(),o=Math.floor(n/step)*step;$('nextCandleTime').textContent='चल रही कैंडल: '+fmt(o)+' से '+fmt(o+step)}
 clock();setInterval(clock,1000);
 async function getBars(pair,mins,key){
  // Providers publish 1m and 5m candles; 2m/3m are correctly built from completed 1m bars.
