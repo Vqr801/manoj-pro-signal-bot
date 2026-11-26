@@ -108,7 +108,7 @@ async function getBars(pair,mins,key){
   raw=[...map.values()].filter(x=>x.n>=2).map(({n,...x})=>x).sort((a,b)=>a.t-b.t);
   if(!raw.length)throw Error('इस समय-सीमा में पर्याप्त sampled prices नहीं हैं। डेटा रिकॉर्ड होने दें।');
   if(now-raw.at(-1).t>step*2+90000)throw Error('नई बंद candle अभी नहीं बनी या samples में gap है; सिग्नल रोका गया।');
- }}
+ }
  // Group provider candles into selected timeframe using UTC epoch boundaries.
  const map=new Map();
  for(const v of raw){const t=Math.floor(v.t/step)*step;if(t+step>Date.now())continue;let a=map.get(t);if(!a)map.set(t,{t,o:v.o,h:v.h,l:v.l,c:v.c});else{a.h=Math.max(a.h,v.h);a.l=Math.min(a.l,v.l);a.c=v.c}}
