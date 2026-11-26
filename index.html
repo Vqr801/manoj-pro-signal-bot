@@ -38,7 +38,7 @@
 <div class="muted warning">सुरक्षा: API key इसी browser के local storage में सेव होगी, सार्वजनिक HTML में नहीं। यह browser में देखी जा सकती है और API provider को भेजी जाती है। साझा मोबाइल पर सेव न करें।</div>
 <label for="pair" style="margin-top:14px">टॉप 5 करेंसी चुनें</label><select id="pair" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="ALL">टॉप 5 करेंसी</option><option value="EUR/USD">EUR/USD</option><option value="GBP/USD">GBP/USD</option><option value="USD/JPY">USD/JPY</option><option value="AUD/USD">AUD/USD</option><option value="USD/CAD">USD/CAD</option></select>
 <label for="tf" style="margin-top:14px">सिग्नल का समय चुनें</label><select id="tf" style="width:100%;padding:12px;border-radius:8px;background:#0e1726;color:white;border:1px solid #52647d"><option value="1">1 मिनट</option><option value="2">2 मिनट</option><option value="3">3 मिनट</option><option value="5" selected>5 मिनट</option></select><div class="top"><button id="save" type="button">Key सेव / हटाएँ</button><button id="scan">अभी Scan करें</button></div>
-<div id="providerStatus" class="status">Key डालें = Twelve Data · Key खाली = मुफ्त BiQuote</div><div id="status" class="status">डेटा स्रोत चुनें और Scan करें।</div>
+<div id="providerStatus" class="status">Key डालें = Twelve Data · Key खाली = मुफ्त BiQuote (पेज खुला रखें; sampled prices से candle बनेगी)</div><div id="status" class="status">डेटा स्रोत चुनें और Scan करें।</div>
 </div>
 <div class="card"><div class="top"><div><b>ऑटो स्कैन</b><div class="small">चुने हुए समय के अनुसार जाँच</div></div><button id="auto">Auto Scan चालू करें</button></div><div id="results"><p class="muted">अभी कोई सिग्नल नहीं।</p></div></div>
 <div class="card">
@@ -53,14 +53,34 @@
 const $=id=>document.getElementById(id);
 const pairs=['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD'];
 const symbols={'EUR/USD':'EURUSD','GBP/USD':'GBPUSD','USD/JPY':'USDJPY','AUD/USD':'AUDUSD','USD/CAD':'USDCAD'};
-let autoTimer=null,busy=false,lastBoundary=0;
+let autoTimer=null,busy=false,lastBoundary=0,tickTimer=null,tickBusy=false;
 function status(t){$('status').textContent=t}
 function source(){try{return localStorage.getItem('tdkey')||''}catch(e){return ''}}
-function showSource(){ $('providerStatus').textContent=source()?'डेटा स्रोत: Twelve Data (API Key सेव है)':'डेटा स्रोत: मुफ्त BiQuote';}
+function showSource(){ $('providerStatus').textContent=source()?'डेटा स्रोत: Twelve Data (API Key सेव है)':'डेटा स्रोत: मुफ्त BiQuote · sampled-price candles';}
 function save(){let k=$('key').value.trim();try{if(k)localStorage.setItem('tdkey',k);else localStorage.removeItem('tdkey');showSource();status(k?'Twelve Data Key सेव हो गई।':'Key हट गई। अब मुफ्त BiQuote डेटा से स्कैन होगा।')}catch(e){status('Storage अनुमति नहीं: Chrome Site settings में Storage allow करें।')}}
 $('save').addEventListener('click',save);
 try{$('key').value=source()}catch(e){}
 showSource();
+// Free BiQuote: sample fresh mid prices every 12 seconds and retain a rolling local history.
+// The page must remain open; this is sampled-price candle construction, not broker-native OHLC.
+async function collectSamples(){
+ if(tickBusy||source())return;tickBusy=true;
+ try{
+  let saved=[];try{saved=JSON.parse(localStorage.getItem('prox_biquote_samples_v1')||'[]')}catch(e){}
+  for(const p of pairs){
+   try{
+    const r=await fetch('https://biquote.io/api/'+symbols[p]+'?allowStale=false',{cache:'no-store'});
+    if(!r.ok)continue;const j=await r.json(),t=Date.parse(j.timestamp||j.lastQuoteAt),price=Number(j.mid),age=Number(j.quoteAgeSeconds);
+    if(Number.isFinite(t)&&Number.isFinite(price)&&price>0&&Number.isFinite(age)&&age<=90&&Date.now()-t<=90000){
+     if(!saved.some(x=>x.s===symbols[p]&&x.t===t))saved.push({s:symbols[p],t,p:price});
+    }
+   }catch(e){}
+  }
+  const cutoff=Date.now()-48*60*60*1000;saved=saved.filter(x=>x&&x.t>=cutoff&&Number.isFinite(x.p)).slice(-18000);
+  try{localStorage.setItem('prox_biquote_samples_v1',JSON.stringify(saved))}catch(e){status('मोबाइल स्टोरेज भर गया; पुराना tick इतिहास हटाएँ।')}
+ }finally{tickBusy=false}
+}
+if(!source()){collectSamples();tickTimer=setInterval(collectSamples,12000)}
 function fmt(t){return new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(t))+' IST'}
 function clock(){let m=Number($('tf').value)||5,step=m*60000,n=Date.now(),o=Math.floor(n/step)*step+step;$('nextCandleTime').textContent='अगली कैंडल: '+fmt(o)+' से '+fmt(o+step)}
 clock();setInterval(clock,1000);
@@ -74,20 +94,21 @@ async function getBars(pair,mins,key){
   if(!r.ok||!Array.isArray(j.values))throw Error(j.message||j.status||'Twelve Data candle API error');
   raw=j.values.map(v=>({t:Date.parse(v.datetime.replace(' ','T')+'Z'),o:+v.open,h:+v.high,l:+v.low,c:+v.close})).filter(x=>Number.isFinite(x.t)).sort((a,b)=>a.t-b.t);
  }else{
-  // Verify a strictly fresh tick first. BiQuote returns 404 if the quote is >5 minutes old.
-  const tickUrl='https://biquote.io/api/'+symbols[pair]+'?allowStale=false';
-  const tr=await fetch(tickUrl,{cache:'no-store'});let tick=null;try{tick=await tr.json()}catch(e){}
-  if(!tr.ok)throw Error('BiQuote LIVE tick उपलब्ध नहीं (HTTP '+tr.status+'): '+(tick?.message||tick?.error||'quote stale / feed unavailable'));
-  const age=Number(tick.quoteAgeSeconds);
-  const stamp=Date.parse(tick.timestamp||tick.lastQuoteAt);
-  if(!Number.isFinite(stamp)||!Number.isFinite(age)||age>300)throw Error('BiQuote tick ताज़ा नहीं: quoteAgeSeconds='+(Number.isFinite(age)?age:'unknown')+'; सिग्नल रोका गया');
-  const u='https://biquote.io/api/'+symbols[pair]+'/ohlc?interval='+native+'&limit=500';
-  const r=await fetch(u,{cache:'no-store'}),j=await r.json();
-  if(!r.ok||!Array.isArray(j.bars))throw Error(j.message||j.error||'BiQuote OHLC API error');
-  raw=j.bars.filter(x=>x.isOpen!==true).map(x=>({t:Date.parse(x.openTime),o:+x.open,h:+x.high,l:+x.low,c:+x.close})).filter(x=>Number.isFinite(x.t)).sort((a,b)=>a.t-b.t);
-  const newest=raw.at(-1)?.t;
-  if(!Number.isFinite(newest)||stamp-newest>Math.max(step*2,600000))throw Error('BiQuote live tick ताज़ा ('+fmt(stamp)+') है, लेकिन OHLC candle feed पीछे है (आखिरी बंद candle '+(Number.isFinite(newest)?fmt(newest):'missing')+'). candle feed सुधरने तक कोई signal नहीं।');
- }
+  // Build candles from sampled live mid-prices saved locally while this page is open.
+  const keyName='prox_biquote_samples_v1';
+  let saved=[];try{saved=JSON.parse(localStorage.getItem(keyName)||'[]')}catch(e){saved=[]}
+  const now=Date.now(),cutoff=now-48*60*60*1000;
+  saved=saved.filter(x=>x&&Number.isFinite(x.t)&&Number.isFinite(x.p)&&x.t>=cutoff);
+  const rows=saved.filter(x=>x.s===symbols[pair]).sort((a,b)=>a.t-b.t);
+  if(!rows.length)throw Error('नया लाइव मूल्य अभी रिकॉर्ड नहीं हुआ। पेज खुला रखें; पहले नई कैंडल बनने दें।');
+  const last=rows.at(-1);
+  if(now-last.t>90000)throw Error('BiQuote sampled price 90 सेकंड से पुराना है; नया डेटा नहीं, सिग्नल रोका गया।');
+  const map=new Map();
+  for(const x of rows){const t=Math.floor(x.t/step)*step;if(t+step>now)continue;let a=map.get(t);if(!a)map.set(t,{t,o:x.p,h:x.p,l:x.p,c:x.p,n:1});else{a.h=Math.max(a.h,x.p);a.l=Math.min(a.l,x.p);a.c=x.p;a.n++}}
+  raw=[...map.values()].filter(x=>x.n>=2).map(({n,...x})=>x).sort((a,b)=>a.t-b.t);
+  if(!raw.length)throw Error('इस समय-सीमा में पर्याप्त sampled prices नहीं हैं। डेटा रिकॉर्ड होने दें।');
+  if(now-raw.at(-1).t>step*2+90000)throw Error('नई बंद candle अभी नहीं बनी या samples में gap है; सिग्नल रोका गया।');
+ }}
  // Group provider candles into selected timeframe using UTC epoch boundaries.
  const map=new Map();
  for(const v of raw){const t=Math.floor(v.t/step)*step;if(t+step>Date.now())continue;let a=map.get(t);if(!a)map.set(t,{t,o:v.o,h:v.h,l:v.l,c:v.c});else{a.h=Math.max(a.h,v.h);a.l=Math.min(a.l,v.l);a.c=v.c}}
