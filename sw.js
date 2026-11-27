@@ -1,5 +1,5 @@
 const CACHE='payasi-ai-pro-cache-v11';
-const FILES=['./','./index.html','./app.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
+const FILES=['./','./index.html','./app.html','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)));self.skipWaiting();});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const url=new URL(event.request.url);if(url.origin!==location.origin)return;\n  // Let the new app's own page and service worker handle its subtree; do not serve legacy ProX cache there.\n  if(url.pathname.startsWith('/manoj-pro-signal-bot/forex-signal-bot-pro/'))return;event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request).then(response=>{if(response.ok){const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));}return response;}).catch(()=>caches.match('./index.html'))));});
