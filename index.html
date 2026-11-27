@@ -55,6 +55,9 @@ const pairs=['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD'];
 const symbols={'EUR/USD':'EURUSD','GBP/USD':'GBPUSD','USD/JPY':'USDJPY','AUD/USD':'AUDUSD','USD/CAD':'USDCAD'};
 let autoTimer=null,busy=false,lastBoundary=0,tickTimer=null,tickBusy=false;
 let tdSocket=null,tdReconnectTimer=null,tdHeartbeat=null,tdHistory={},tdMinuteBars={},tdStreamActive=false,tdSocketKey='';
+let tdServerTime=0,tdServerPerf=0;
+function marketNow(){return tdServerTime?tdServerTime+(performance.now()-tdServerPerf):Date.now()}
+function syncMarketClock(t){if(Number.isFinite(t)&&t>tdServerTime){tdServerTime=t;tdServerPerf=performance.now()}}
 function tdStreamStatus(msg){$('providerStatus').textContent=msg}
 function tdStartStream(key){
  if(!key)return;
@@ -68,7 +71,8 @@ function tdStartStream(key){
  tdSocket.onmessage=ev=>{let d;try{d=JSON.parse(ev.data)}catch(e){return}
  if(d.event!=='price'||!Number.isFinite(Number(d.price)))return;
  let pair=d.symbol,ts=Number(d.timestamp);if(ts<1e12)ts*=1000;
- if(!Number.isFinite(ts)||Date.now()-ts>120000||ts>Date.now()+30000)return;
+ if(!Number.isFinite(ts))return;
+ if(tdServerTime&&ts<tdServerTime-120000)return;syncMarketClock(ts);
  let p=Number(d.price),minute=Math.floor(ts/60000)*60000,a=tdMinuteBars[pair];
  if(!a||a.t!==minute){if(a){tdHistory[pair]=tdHistory[pair]||[];tdHistory[pair].push(a);tdHistory[pair]=tdHistory[pair].slice(-140)}
  a={t:minute,o:p,h:p,l:p,c:p,n:1};tdMinuteBars[pair]=a}
@@ -96,7 +100,8 @@ async function collectSamples(){
    try{
     const r=await fetch('https://biquote.io/api/'+symbols[p]+'?allowStale=false',{cache:'no-store'});
     if(!r.ok)continue;const j=await r.json(),t=Date.parse(j.timestamp||j.lastQuoteAt),price=Number(j.mid),age=Number(j.quoteAgeSeconds);
-    if(Number.isFinite(t)&&Number.isFinite(price)&&price>0&&Number.isFinite(age)&&age<=90&&Date.now()-t<=90000){
+    if(Number.isFinite(t)&&Number.isFinite(price)&&price>0&&Number.isFinite(age)&&age<=90){
+     syncMarketClock(t);
      if(!saved.some(x=>x.s===symbols[p]&&x.t===t))saved.push({s:symbols[p],t,p:price});
     }
    }catch(e){}
@@ -107,7 +112,7 @@ async function collectSamples(){
 }
 if(!source()){collectSamples();tickTimer=setInterval(collectSamples,12000)}
 function fmt(t){return new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}).format(new Date(t))+' IST'}
-function clock(){let m=Number($('tf').value)||5,step=m*60000,n=Date.now(),o=Math.floor(n/step)*step;$('nextCandleTime').textContent='चल रही कैंडल: '+fmt(o)+' से '+fmt(o+step)}
+function clock(){let m=Number($('tf').value)||5,step=m*60000,n=marketNow(),o=Math.floor(n/step)*step;$('nextCandleTime').textContent='चल रही कैंडल: '+fmt(o)+' से '+fmt(o+step)}
 clock();setInterval(clock,1000);
 async function getBars(pair,mins,key){
  // Providers publish 1m and 5m candles; 2m/3m are correctly built from completed 1m bars.
@@ -128,7 +133,7 @@ async function getBars(pair,mins,key){
   // Build candles from sampled live mid-prices saved locally while this page is open.
   const keyName='prox_biquote_samples_v1';
   let saved=[];try{saved=JSON.parse(localStorage.getItem(keyName)||'[]')}catch(e){saved=[]}
-  const now=Date.now(),cutoff=now-48*60*60*1000;
+  const now=marketNow(),cutoff=now-48*60*60*1000;
   saved=saved.filter(x=>x&&Number.isFinite(x.t)&&Number.isFinite(x.p)&&x.t>=cutoff);
   const rows=saved.filter(x=>x.s===symbols[pair]).sort((a,b)=>a.t-b.t);
   if(!rows.length)throw Error('नया लाइव मूल्य अभी रिकॉर्ड नहीं हुआ। पेज खुला रखें; पहले नई कैंडल बनने दें।');
@@ -142,14 +147,14 @@ async function getBars(pair,mins,key){
  }
  // Group provider candles into selected timeframe using UTC epoch boundaries.
  const map=new Map();
- for(const v of raw){const t=Math.floor(v.t/step)*step;if(t+step>Date.now())continue;let a=map.get(t);if(!a)map.set(t,{t,o:v.o,h:v.h,l:v.l,c:v.c});else{a.h=Math.max(a.h,v.h);a.l=Math.min(a.l,v.l);a.c=v.c}}
+ for(const v of raw){const t=Math.floor(v.t/step)*step;if(t+step>marketNow())continue;let a=map.get(t);if(!a)map.set(t,{t,o:v.o,h:v.h,l:v.l,c:v.c});else{a.h=Math.max(a.h,v.h);a.l=Math.min(a.l,v.l);a.c=v.c}}
  return [...map.values()].sort((a,b)=>a.t-b.t);
 }
 function ema(a,n){let k=2/(n+1),v=a[0];for(let x of a.slice(1))v=x*k+v*(1-k);return v}
 function analyze(b){let c=b.map(x=>x.c),a=ema(c.slice(-30),9),d=ema(c.slice(-50),21),last=b.at(-1),prev=b.at(-2),green=last.c>last.o,red=last.c<last.o;let side='WAIT',score=50;if(a>d&&last.c>last.o){side='CALL / GREEN';score=65+(last.c>prev.h?15:0)}else if(a<d&&last.c<last.o){side='PUT / RED';score=65+(last.c<prev.l?15:0)}return {side,score,last}}
-async function scan(){if(busy)return;busy=true;$('scan').disabled=true;$('auto').disabled=true;let key=source(),mins=Number($('tf').value)||5,sel=$('pair').value,targets=sel==='ALL'?pairs:[sel],out='',prob='';status('ताज़ा बंद कैंडल डेटा प्राप्त हो रहा है…');try{for(let p of targets){try{let b=await getBars(p,mins,key);if(b.length<30)throw Error('अभी '+b.length+'/30 बंद candles मिलीं। '+mins+' मिनट के टाइमफ्रेम में 30 पूरी candles रिकॉर्ड होने तक पेज खुला रखें; लगभग '+(30*mins)+' मिनट लग सकते हैं। अभी सिग्नल नहीं।');let z=analyze(b),time=b.at(-1).t,expected=Math.floor(Date.now()/(mins*60000))*mins*60000-mins*60000;if(time<expected-2*mins*60000)throw Error('DATA DELAY: API की बंद candle अपेक्षित समय से 2 candles से अधिक पीछे है (अंतिम candle '+fmt(time)+')');let cls=z.side.includes('CALL')?'call':z.side.includes('PUT')?'put':'wait';out+='<div class="row"><div><b>'+p+'</b><div class="small">कैंडल समय: '+fmt(time)+' • Close: '+z.last.c+' • डेटा स्रोत: '+(key?'Twelve Data':'BiQuote sampled-price')+'</div></div><div class="'+cls+'">'+z.side+'<br>'+z.score+'%</div></div>';prob+='<div class="status"><b>'+p+'</b> · पिछली बंद कैंडल: '+fmt(time)+'<br>दिशा: '+z.side+' · संकेत स्कोर '+z.score+'% (जीत की वास्तविक probability नहीं)</div>'}catch(e){out+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,160)+'</div></div><div class="wait">DATA ERROR</div></div>'}}$('results').innerHTML=out;$('probability').innerHTML=prob||'डेटा उपलब्ध नहीं';status('स्कैन पूरा। '+(key?(tdStreamActive?'Twelve Data LIVE stream सक्रिय।':'WebSocket नहीं जुड़ा; cache/REST डेटा।'):'BiQuote sampled data')+' • पुराना डेटा हो तो ट्रेड न करें।')}catch(e){status('स्कैन त्रुटि: '+e.message)}finally{busy=false;$('scan').disabled=false;$('auto').disabled=false}}
+async function scan(){if(busy)return;busy=true;$('scan').disabled=true;$('auto').disabled=true;let key=source(),mins=Number($('tf').value)||5,sel=$('pair').value,targets=sel==='ALL'?pairs:[sel],out='',prob='';status('ताज़ा बंद कैंडल डेटा प्राप्त हो रहा है…');try{for(let p of targets){try{let b=await getBars(p,mins,key);if(b.length<30)throw Error('अभी '+b.length+'/30 बंद candles मिलीं। '+mins+' मिनट के टाइमफ्रेम में 30 पूरी candles रिकॉर्ड होने तक पेज खुला रखें; लगभग '+(30*mins)+' मिनट लग सकते हैं। अभी सिग्नल नहीं।');let z=analyze(b),time=b.at(-1).t,now=marketNow(),expected=Math.floor(now/(mins*60000))*mins*60000-mins*60000;if(time<expected-mins*60000)throw Error('DATA DELAY: अंतिम बंद candle समय से पीछे है (अंतिम candle '+fmt(time)+', अपेक्षित '+fmt(expected)+'). डेटा अपडेट होने तक सिग्नल रोका गया।');let cls=z.side.includes('CALL')?'call':z.side.includes('PUT')?'put':'wait';out+='<div class="row"><div><b>'+p+'</b><div class="small">कैंडल समय: '+fmt(time)+' • Close: '+z.last.c+' • डेटा स्रोत: '+(key?'Twelve Data':'BiQuote sampled-price')+'</div></div><div class="'+cls+'">'+z.side+'<br>'+z.score+'%</div></div>';prob+='<div class="status"><b>'+p+'</b> · पिछली बंद कैंडल: '+fmt(time)+'<br>दिशा: '+z.side+' · संकेत स्कोर '+z.score+'% (जीत की वास्तविक probability नहीं)</div>'}catch(e){out+='<div class="row"><div><b>'+p+'</b><div class="small">'+String(e.message).slice(0,160)+'</div></div><div class="wait">DATA ERROR</div></div>'}}$('results').innerHTML=out;$('probability').innerHTML=prob||'डेटा उपलब्ध नहीं';status('स्कैन पूरा। '+(key?(tdStreamActive?'Twelve Data LIVE stream सक्रिय।':'WebSocket नहीं जुड़ा; cache/REST डेटा।'):'BiQuote sampled data')+' • पुराना डेटा हो तो ट्रेड न करें।')}catch(e){status('स्कैन त्रुटि: '+e.message)}finally{busy=false;$('scan').disabled=false;$('auto').disabled=false}}
 $('scan').addEventListener('click',scan);
-$('auto').addEventListener('click',()=>{if(autoTimer){clearInterval(autoTimer);autoTimer=null;$('auto').textContent='Auto Scan चालू करें';status('Auto Scan बंद।');return}lastBoundary=0;$('auto').textContent='Auto Scan बंद करें';let check=()=>{let step=(Number($('tf').value)||5)*60000,b=Math.floor(Date.now()/step)*step;if(Date.now()>=b+6000&&b>lastBoundary&&!busy){lastBoundary=b;scan()}};check();autoTimer=setInterval(check,2000);status('Auto Scan चालू: candle बंद होने के बाद scan होगा।')});
+$('auto').addEventListener('click',()=>{if(autoTimer){clearInterval(autoTimer);autoTimer=null;$('auto').textContent='Auto Scan चालू करें';status('Auto Scan बंद।');return}lastBoundary=0;$('auto').textContent='Auto Scan बंद करें';let check=()=>{let step=(Number($('tf').value)||5)*60000,b=Math.floor(marketNow()/step)*step;if(Date.now()>=b+6000&&b>lastBoundary&&!busy){lastBoundary=b;scan()}};check();autoTimer=setInterval(check,2000);status('Auto Scan चालू: candle बंद होने के बाद scan होगा।')});
 $('tf').addEventListener('change',clock);
 </script>
 <script>
