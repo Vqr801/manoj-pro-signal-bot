@@ -1,7 +1,7 @@
 {
-  "name": "Forex Breakout Retest Reversal Signal Bot",
-  "short_name": "Forex Signal Bot",
-  "description": "Forex currency pair signal scanner for Breakout, Retest and Reversal setups.",
+  "name": "PAYASI AI PRO",
+  "short_name": "PAYASI AI PRO",
+  "description": "PAYASI AI PRO Forex currency pair signal scanner.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
