@@ -28,7 +28,9 @@
 <script>
 const $=id=>document.getElementById(id);let key='',symbols=[],streaming=false,reader=null,controller=null,latest={},lastCandles={};
 let base='';
-function msg(s){$('state').textContent=s}\nfunction loadProxy(){try{base=(localStorage.getItem('payasi_otc_proxy')||'').trim();$('proxy').value=base}catch(e){base=''}}\nfunction saveProxy(){let v=$('proxy').value.trim().replace(/\\/$/,'');if(!/^https:\\/\\//i.test(v)){msg('Proxy URL https:// से शुरू होना चाहिए।');return}try{localStorage.setItem('payasi_otc_proxy',v);base=v;$('plan').textContent='Proxy URL सेव।';msg('Proxy URL सेव हो गया।')}catch(e){msg('Proxy URL सेव नहीं हुआ।')}}
+function msg(s){$('state').textContent=s}
+function loadProxy(){try{base=(localStorage.getItem('payasi_otc_proxy')||'').trim();$('proxy').value=base}catch(e){base=''}}
+function saveProxy(){let v=$('proxy').value.trim().replace(/\/+$/,'');if(!v.startsWith('https://')){msg('Proxy URL https:// से शुरू होना चाहिए।');return}try{localStorage.setItem('payasi_otc_proxy',v);base=v;$('plan').textContent='Proxy URL सेव।';msg('Proxy URL सेव हो गया।')}catch(e){msg('Proxy URL सेव नहीं हुआ।')}}
 function setKey(){key=$('key').value.trim();if(!key){msg('API Key खाली है।');return}try{localStorage.setItem('payasi_otc_key',key);$('plan').textContent='Key इस डिवाइस में सेव। API access/plan जाँचना बाकी है।';msg('Key सेव हो गई। अब OTC पेयर लोड करें।')}catch(e){msg('Browser storage अनुमति नहीं मिली। Key इस पेज पर ही रखें और पुनः प्रयास करें।')}}
 function getKey(){try{key=localStorage.getItem('payasi_otc_key')||'';$('key').value=key}catch(e){}}
 function forget(){try{localStorage.removeItem('payasi_otc_key')}catch(e){}key='';$('key').value='';$('plan').textContent='Key हटाई गई।';msg('Key हट गई।')}
